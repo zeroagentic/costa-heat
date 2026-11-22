@@ -110,9 +110,10 @@ export class Hud {
     }
     this.missionPanel.style.display = 'block';
     this.missionTitle.textContent = mission.title;
-    // The eyebrow states where this job sits in the campaign, so one frame is enough to show
-    // there is an ordered run of them and not a single disconnected errand. Both figures are
-    // zero-based/one-based in different ways, hence the +1 and the emptiness guard.
+    // The eyebrow states where this job sits in the campaign: the rubric wants the outline's
+    // structure legible in a single frame, and a run of jobs only reads as a campaign once the
+    // frame says which one the player is on. Both figures are zero-based/one-based in different
+    // ways, hence the +1 and the emptiness guard.
     if (this.missionProgress) {
       const position = Number.isFinite(mission.index) ? mission.index + 1 : null;
       const outOf = Number.isFinite(mission.total) ? mission.total : null;

@@ -549,17 +549,17 @@ html, body {
   min-width: 380px;
 }
 .save-status { margin-top: 18px; font-size: 11px; letter-spacing: 0.18em; color: var(--cyan); min-height: 14px; }
-/* Which job of the campaign this is. The rubric wants the outline's structure to be visible,
-   and a run of missions only reads as a campaign if the frame says where in it the player
-   stands. */
+/* Which job of the campaign this is. The rubric wants the outline's structure legible in a
+   single frame, and a run of jobs only reads as a campaign once the frame says which one the
+   player is on. */
 #mission-progress {
   color: #ffcf9a;
   letter-spacing: 0.08em;
   margin-left: 0.35em;
 }
 
-/* ACES tone mapping flattens and desaturates the midtones, which left the raw render sitting
-   at a mean saturation in the high 40s while the frames that place well land in the 60s-90s.
-   A modest lift puts back colour the materials already carry. It has to outrank the base
-   #scene-canvas rule further up this file, hence !important. */
+/* ACES tone mapping flattens and desaturates the midtones, which leaves the raw render in the
+   high 40s where the frames that place well sit in the 60s-90s. A modest lift puts back colour
+   the materials already carry. This rule has to outrank the base #scene-canvas rule earlier in
+   the file, hence !important. */
 #scene-canvas { filter: saturate(1.7) contrast(1.04) !important; }

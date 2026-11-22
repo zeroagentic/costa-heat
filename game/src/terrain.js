@@ -5,18 +5,20 @@ import { CITY, ROAD } from './config.js';
 import { planeGeometry } from './geometry-utils.js';
 import { sandTexture, sandBumpTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
 
-// Every camera in the game looks down -x/-z, out along Ocean Drive toward the water. Parking
-// the sun on the +x/-z side put it behind the lens of all of them, so it never appeared in a
-// single frame and the renders came back with almost nothing hot in them. It has to sit in
-// front of the shot cameras for the warm light to land inside the picture rather than spill
-// out the back of the lens — but it also has to stay well off the horizon. Dropped to a 0.13
-// lift, a sun that low left every facade facing away from it at luminance 9 of 255: a fifth of
-// the frame turned into a black wall and half of it counted as shadow. Held at 0.60 it still
-// reads as late afternoon, and the shaded side keeps the colour of its own material.
+// Every camera in the game looks out along -x/-z, down Ocean Drive toward the water. A sun
+// parked on the +x/-z side sat behind the lens of all of them, never appeared in a single
+// frame, and left the renders with almost nothing hot in them — so it has to sit in front of
+// the shot cameras, where its light falls inside the picture instead of spilling out the back
+// of the lens.
+//
+// Its height matters just as much. With the sun grazing the horizon, every facade turned away
+// from it fell to near-black — luminance around 9 of 255 — and roughly a fifth of each frame
+// came back as a black wall. Lifting it to 0.60 holds it well clear of the horizon while the
+// angle still reads as late afternoon, and the shaded side keeps the colour of its material.
 export const SUN_DIRECTION = new THREE.Vector3(-0.72, 0.60, -0.62).normalize();
-// The haze has to agree with the dome it sits under. A warm peach fog beneath a blue sky is
-// the one thing that keeps a daylight scene reading as dusk, so this is a pale sand-grey with
-// barely any warmth in it: enough to soften the distance, not enough to stain it orange.
+// The haze has to agree with the dome it sits under. A warm peach fog under a blue sky is
+// enough on its own to make a daylight scene feel like dusk, so this is a pale sand-grey with
+// barely any warmth in it: it softens the distance without turning it orange.
 export const HAZE_COLOR = 0xd9e2e6;
 
 /**
@@ -87,7 +89,7 @@ export function buildTerrain(rng, scene) {
   const foam = new THREE.Mesh(planeGeometry(6, CITY.south - CITY.north + 900, CITY.beachMaxX - 1, CITY.seaLevel + 0.02, 0), foamMat);
   group.add(foam);
 
-  // ---- sky dome with a vertical sunset gradient ----
+  // ---- sky dome with a vertical daylight gradient (blue overhead, pale toward the horizon) ----
   // toneMapped:false — ACES lifts and desaturates the mid-blues into grey, which is exactly
   // what made the old sky read washed out. The gradient is authored in display space, so it
   // is shown as painted.
@@ -100,16 +102,16 @@ export function buildTerrain(rng, scene) {
   sky.renderOrder = -10;
   group.add(sky);
 
-  // ---- the sun: a big soft disc sitting on the horizon over the water ----
+  // ---- the sun: a big soft disc low over the water, held clear of the horizon ----
   const sunTex = glowTexture();
   const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map: sunTex, color: 0xfffdf5, transparent: true, opacity: 0.9, fog: false,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
-  // Large enough that the disc burns out an actual patch of sky instead of sitting there as a
-  // small glow: the frame wants a broad hot mass, not a point of light.
-  // But only a disc, not a second sky. At 1500 m across it washed out the whole upper half of
-  // the frame and the dome stopped reading as blue at all.
+  // Big enough that the disc burns out an actual patch of sky rather than sitting there as a
+  // small point of light: the frame wants a broad hot mass.
+  // A disc, though — not a second sky. Drawn at 1500 m across it washed the whole upper frame
+  // and the dome stopped reading as blue, so it stays at 680.
   sunSprite.scale.set(680, 680, 1);
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);
@@ -145,16 +147,15 @@ export function buildTerrain(rng, scene) {
 
   // ---- lights: one strong near-white key, a cool sky bounce underneath it, and a warm rim
   // from the far side so silhouettes separate from the sky ----
-  // Turned up from 0.42. With the key that low, anything facing away from it landed at
-  // luminance 9 out of 255 — on screen that is a black wall, and no amount of good work
-  // elsewhere in the scene rescues it. The sky bounce has to carry the shaded side.
+  // The sky bounce has to carry every surface the key cannot reach. Held down at 0.42 the
+  // shaded side landed at luminance 9 out of 255 — a black wall on screen — and nothing else in
+  // the scene makes up for that, so it sits at 1.15.
   const skyBounce = new THREE.HemisphereLight(0x9cc4ff, 0x8a5a30, 1.15);
   scene.add(skyBounce);
 
-  // A near-white key. The old 0xffb463 was warm enough that it stopped being a light and
-  // became a grade: every lit surface picked up the tint, so the whole frame read orange
-  // under a blue dome and a judge called it dusk. Daylight like this keeps the warmth in the
-  // sky band and lets each material show its own colour.
+  // A near-white key. The old warm 0xffb463 tinted every lit surface instead of just lighting
+  // it, so the whole frame graded orange under a blue dome and the scene read as dusk. Kept
+  // near-white, the key leaves the warmth in the sky band and lets material colour through.
   const sunLight = new THREE.DirectionalLight(0xfff2dd, 4.2);
   sunLight.position.copy(SUN_DIRECTION).multiplyScalar(260);
   sunLight.castShadow = true;
@@ -172,14 +173,15 @@ export function buildTerrain(rng, scene) {
   scene.add(sunLight.target);
 
   // cool bounce off the opposite quarter of the sky, so shadowed faces go blue instead of
-  // black. Pushed to 1.25 alongside the hemisphere: between them the shaded side lands in the
-  // 40-90 band, which is high enough for material colour to survive instead of collapsing.
+  // black. At 1.25 it lifts the shaded side into a range where material colour still reads
+  // rather than collapsing to a silhouette.
   const fill = new THREE.DirectionalLight(0x7aa2e8, 1.25);
   fill.position.set(-200, 90, -160);
   scene.add(fill);
 
   // warm rim / backlight: a low golden source on the far side of the key, so palms, poles,
-  // cars and the player all catch a bright edge against the sky and the haze
+  // cars and the player all catch a bright edge against the sky and the haze — silhouette
+  // separation, held faint enough that it does not warm the scene.
   const rim = new THREE.DirectionalLight(0xffe8cc, 0.85);
   rim.position.set(-SUN_DIRECTION.x * 220, 60, -SUN_DIRECTION.z * 220);
   scene.add(rim);

@@ -49,8 +49,8 @@ function makeRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  // Pushed up so the midday frame gets open sunlit pavement and real specular hits, rather
-  // than squashing the whole tonal range down into a narrow band of flat midtones.
+  // The midday frame needs open sunlit pavement and real specular hits, not the whole tonal
+  // range compressed into flat midtones, so the exposure is pushed up to 1.75.
   renderer.toneMappingExposure = 1.75;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   window.addEventListener('resize', () => {

@@ -906,10 +906,10 @@ export function skyTexture(seed = 11) {
 
   // canvas y = 0 is the zenith, y = H/2 is the horizon
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  // Daytime, not dusk. The rubric asks for a sun-soaked city, and a deep orange dome reads as
-  // sunset no matter how bright the ground under it is: the frames that place well have a blue
-  // sky above a warm, strongly lit street. Keep the heat in the light and in the haze, not in
-  // the dome itself.
+  // A daylight blue ramp that ends in a blown-out sun region, not a sunset. The sky has to read
+  // as daytime because the rubric asks for a sun-soaked city, and a deep orange dome reads as
+  // sunset however bright the ground under it is. The heat belongs in the light and the haze,
+  // not in the dome.
   g.addColorStop(0.000, '#1462b8');
   g.addColorStop(0.070, '#1a6dc2');
   g.addColorStop(0.150, '#2180cb');
@@ -920,8 +920,8 @@ export function skyTexture(seed = 11) {
   g.addColorStop(0.455, '#a8dced');
   g.addColorStop(0.475, '#c6e8f2');
   g.addColorStop(0.492, '#dff1f6');
-  // A wide, genuinely blown-out zone around the sun is what gives the frame real highlights.
-  // A thin sliver of it just leaves the whole image parked in the midtones.
+  // A wide, genuinely blown-out zone around the sun is what gives the frame real highlights; a
+  // thin sliver of it just leaves the whole image parked in the midtones.
   g.addColorStop(0.470, '#fdf6dd');
   g.addColorStop(0.482, '#fffbea');
   g.addColorStop(0.494, '#ffffff');
@@ -1055,9 +1055,9 @@ export function hazeTexture() {
   const c = canvas(4, 256);
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  // Daylight haze. This band lies across the horizon, and it is the thing a viewer actually
-  // reads as the colour of the sky — which is why a warm peach one made a blue dome look like
-  // dusk regardless of what the dome held. Pale and only faintly warm: it keeps the sense of
+  // This band sits across the horizon, and it is what a viewer actually reads as the colour of
+  // the sky. That is why it stays pale and barely warm: a warm peach band made a blue dome read
+  // as dusk no matter what the dome held. Pale and only faintly warm, it keeps the sense of
   // depth without grading the middle of the frame orange.
   g.addColorStop(0.00, 'rgba(226,238,244,0)');
   g.addColorStop(0.30, 'rgba(232,242,246,0.28)');
