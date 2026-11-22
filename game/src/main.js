@@ -48,7 +48,7 @@ function makeRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.02;
+  renderer.toneMappingExposure = 1.38;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   window.addEventListener('resize', () => {
     const w = window.innerWidth, hgt = window.innerHeight;

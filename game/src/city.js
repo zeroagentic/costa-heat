@@ -14,7 +14,7 @@ export class City {
     this.colliders = [];
     this.palms = [];
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0xf3b98f, 0.00055);
+    this.scene.fog = new THREE.FogExp2(0xe8a878, 0.00092);
   }
 
   async build(progress = () => {}) {

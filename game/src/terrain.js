@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { CITY, ROAD } from './config.js';
 import { planeGeometry } from './geometry-utils.js';
-import { sandTexture, waterTexture, skyTexture, glowTexture } from './textures.js';
+import { sandTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
 
 export const SUN_DIRECTION = new THREE.Vector3(0.72, 0.13, -0.5).normalize();
 export const HAZE_COLOR = 0xf0b78a;
@@ -71,8 +71,13 @@ export function buildTerrain(rng, scene) {
   group.add(foam);
 
   // ---- sky dome with a vertical sunset gradient ----
+  // toneMapped:false — ACES lifts and desaturates the mid-blues into grey, which is exactly
+  // what made the old sky read washed out. The gradient is authored in display space, so it
+  // is shown as painted.
   const skyTex = skyTexture();
-  const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false });
+  const skyMat = new THREE.MeshBasicMaterial({
+    map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false,
+  });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(3200, 32, 20), skyMat);
   sky.name = 'sky';
   sky.renderOrder = -10;
@@ -88,10 +93,15 @@ export function buildTerrain(rng, scene) {
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);
 
-  // horizon haze band: a wide billboard that hides the hard end of the sea plane
-  const hazeMat = new THREE.MeshBasicMaterial({ color: 0xffd0a0, transparent: true, opacity: 0.55, fog: false, depthWrite: false, side: THREE.DoubleSide });
-  const haze = new THREE.Mesh(new THREE.PlaneGeometry(6000, 260), hazeMat);
-  haze.position.set(0, 70, 0);
+  // horizon haze band: a soft gradient strip that hides the hard end of the sea plane
+  // without putting a flat grey wall in front of the city
+  const hazeTex = hazeTexture();
+  const hazeMat = new THREE.MeshBasicMaterial({
+    map: hazeTex, transparent: true, opacity: 0.85, fog: false, depthWrite: false,
+    side: THREE.DoubleSide, toneMapped: false,
+  });
+  const haze = new THREE.Mesh(new THREE.PlaneGeometry(6000, 74), hazeMat);
+  haze.position.set(0, 12, 0);
   haze.rotation.y = 0;
   haze.renderOrder = -5;
   group.add(haze);
@@ -112,29 +122,37 @@ export function buildTerrain(rng, scene) {
 
   scene.add(group);
 
-  // ---- lights ----
-  const hemi = new THREE.HemisphereLight(0xbcd8ff, 0xffcaa0, 1.05);
+  // ---- lights: one strong low golden key, a cool sky fill that leaves the shadows dark,
+  // and a warm rim from behind the camera's usual side so silhouettes separate ----
+  const hemi = new THREE.HemisphereLight(0x83b2ff, 0x6b3a18, 0.42);
   scene.add(hemi);
 
-  const sunLight = new THREE.DirectionalLight(0xffd0a0, 3.0);
+  const sunLight = new THREE.DirectionalLight(0xffb463, 4.6);
   sunLight.position.copy(SUN_DIRECTION).multiplyScalar(260);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(1024, 1024);
-  const s = 90;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  const s = 96;
   sunLight.shadow.camera.left = -s;
   sunLight.shadow.camera.right = s;
   sunLight.shadow.camera.top = s;
   sunLight.shadow.camera.bottom = -s;
   sunLight.shadow.camera.near = 1;
-  sunLight.shadow.camera.far = 620;
-  sunLight.shadow.bias = -0.0018;
-  sunLight.shadow.normalBias = 0.035;
+  sunLight.shadow.camera.far = 640;
+  sunLight.shadow.bias = -0.0014;
+  sunLight.shadow.normalBias = 0.03;
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0x7090ff, 0.35);
-  fill.position.set(-160, 110, -120);
+  // cool bounce from the opposite side of the sky: keeps shadows blue, not black
+  const fill = new THREE.DirectionalLight(0x5a82d6, 0.5);
+  fill.position.set(-200, 90, -160);
   scene.add(fill);
+
+  // warm rim / backlight: a low golden light opposite the key, so palms, poles, cars and
+  // the player catch a bright edge against the sky and the haze
+  const rim = new THREE.DirectionalLight(0xffcf9a, 1.15);
+  rim.position.set(-SUN_DIRECTION.x * 220, 60, -SUN_DIRECTION.z * 220);
+  scene.add(rim);
 
   const update = (dt, elapsed, camera, playerPos) => {
     waterTex.offset.x = (waterTex.offset.x + dt * 0.0045) % 1;
@@ -143,7 +161,7 @@ export function buildTerrain(rng, scene) {
     // keep the sky and sun centred on the camera so the dome never ends
     sky.position.copy(camera.position);
     sky.position.y = 0;
-    haze.position.set(camera.position.x, 60, camera.position.z);
+    haze.position.set(camera.position.x, 12 + (camera.position.y - 34) * 0.55, camera.position.z);
     haze.rotation.set(0, Math.atan2(camera.position.x, camera.position.z) + Math.PI / 2, 0);
     // move the shadow frustum with the player so shadows are always crisp nearby
     if (playerPos) {

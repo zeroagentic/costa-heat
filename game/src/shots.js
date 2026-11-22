@@ -105,17 +105,35 @@ export class ShotDirector {
     world.missions.completeObjectiveSilent('find');
     world.wanted.setLevel(2);
 
-    const rig = world.rig;
-    rig.setMode('car');
-    rig.yaw = -0.06;          // dead astern, looking up the ocean avenue
-    rig.pitch = -0.03;
-    rig.distance = 1.85;
+    world.rig.setMode('shot');
 
     settle(world, 50);
     // drive forwards for real: throttle held, wheels turning, speed climbing
     settle(world, 70, 1 / 60, { throttle: 1, steer: 0 });
     car.speed = Math.max(car.speed, 25);
     world.wanted.setLevel(2);
+
+    // Cinematic three-quarter camera, anchored to where the car ACTUALLY ended up after
+    // the drive settle (a static pose would be left behind once the car accelerates).
+    // Low and close so the stolen coupe dominates the left of frame, with the avenue,
+    // palms and sunset receding to the right.
+    const cp = car.position;
+    const fwd = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
+    const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+    const eye = cp.clone()
+      .addScaledVector(fwd, 5.6)      // ahead of the car, so we see its front quarter
+      .addScaledVector(side, 4.6)     // off to one side
+      .setY(1.85);                    // low, near bonnet height
+    const look = cp.clone().addScaledVector(fwd, 0.4).setY(1.05);
+    this.cameraPose = { eye, target: look };
+    this.cameraFn = () => {
+      world.camera.position.copy(this.cameraPose.eye);
+      world.camera.lookAt(this.cameraPose.target.x, this.cameraPose.target.y, this.cameraPose.target.z);
+      world.camera.fov = 56;
+      world.camera.updateProjectionMatrix();
+    };
+    this.cameraFn();
+
     world.hud.say(castMember('sal').name, castMember('sal').lines.return, 6);
     world.hud.showToast('OCEAN DRIVE  ·  MARISOL');
     return { hud: true, freezeInput: true };
