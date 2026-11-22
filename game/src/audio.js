@@ -117,9 +117,12 @@ export class AudioSystem {
   }
 
   /** Punchy pistol report: noise crack plus a low thump. */
-  gunshot(volume = 1, at = null) {
+  gunshot(kind = 'pistol', volume = 1, at = null) {
     if (!this.started) return;
+    if (typeof kind === 'number') { volume = kind; kind = 'pistol'; }
     const v = clamp(volume, 0.1, 1.4);
+    if (kind === 'shotgun') return this._shotgunReport(v);
+    if (kind === 'smg') return this._smgReport(v);
     this._noiseBurst({ duration: 0.07, gain: 0.72 * v, freq: 5200, q: 0.5, type: 'highpass' });
     this._noiseBurst({ duration: 0.22, gain: 0.5 * v, freq: 1100, q: 1.1 });
     const ctx = this.ctx;
@@ -135,6 +138,87 @@ export class AudioSystem {
     g.connect(this.sfxGain);
     osc.start(t);
     osc.stop(t + 0.2);
+  }
+
+  /** Shotgun: a wide low boom with a long tail — all body, no crack. */
+  _shotgunReport(v) {
+    this._noiseBurst({ duration: 0.34, gain: 0.92 * v, freq: 1900, q: 0.45 });
+    this._noiseBurst({ duration: 0.5, gain: 0.42 * v, freq: 620, q: 0.8 });
+    const ctx = this.ctx;
+    const t = this._now();
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(96, t);
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.28);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.72 * v, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    osc.connect(g);
+    g.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.36);
+  }
+
+  /** SMG: a short, dry, high crack — meant to be heard 10 times a second. */
+  _smgReport(v) {
+    this._noiseBurst({ duration: 0.045, gain: 0.58 * v, freq: 6400, q: 0.6, type: 'highpass' });
+    this._noiseBurst({ duration: 0.09, gain: 0.32 * v, freq: 1600, q: 1.3 });
+  }
+
+  /** Magazine out, magazine in: two mechanical clicks. */
+  reload() {
+    if (!this.started) return;
+    this._noiseBurst({ duration: 0.04, gain: 0.2, freq: 1800, q: 3, type: 'bandpass' });
+    setTimeout(() => {
+      if (!this.started) return;
+      this._noiseBurst({ duration: 0.06, gain: 0.26, freq: 900, q: 2.4, type: 'bandpass' });
+    }, 340);
+  }
+
+  /** Weapon swap: a cloth-and-metal shuffle. */
+  weaponSwitch() {
+    if (!this.started) return;
+    this._noiseBurst({ duration: 0.09, gain: 0.16, freq: 2400, q: 1.6, type: 'bandpass' });
+  }
+
+  /** The chopper's door gun: louder and flatter than a pistol, far away. */
+  helicopterShot(volume = 0.5) {
+    if (!this.started) return;
+    this._noiseBurst({ duration: 0.11, gain: 0.4 * volume, freq: 2600, q: 0.7 });
+    this._noiseBurst({ duration: 0.2, gain: 0.22 * volume, freq: 500, q: 0.9 });
+  }
+
+  /** Rotor wash: a low thudding pulse whose rate tracks how close the chopper is. */
+  updateRotor(level, dt) {
+    if (!this.started) return;
+    if (!this._rotor) {
+      const ctx = this.ctx;
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 26;
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 11;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 9;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 260;
+      filter.Q.value = 1.4;
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(this.sfxGain);
+      osc.start();
+      lfo.start();
+      this._rotor = { osc, lfo, gain: g, filter };
+    }
+    const target = clamp(level, 0, 1) * 0.16;
+    this._rotor.gain.gain.setTargetAtTime(target, this._now(), 0.25);
+    this._rotor.lfo.frequency.setTargetAtTime(9 + level * 7, this._now(), 0.3);
   }
 
   dryFire() {
@@ -163,6 +247,7 @@ export class AudioSystem {
 
   carHorn() {
     if (!this.started) return;
+    this.resume();
     const ctx = this.ctx;
     const t = this._now();
     for (const freq of [392, 494]) {
@@ -268,12 +353,12 @@ export class AudioSystem {
     if (!this.engine || !this.started) return;
     const target = clamp(Math.abs(speed) / 30, 0, 1);
     this.engineLevel += (target - this.engineLevel) * clamp(dt * 6, 0, 1);
-    const base = 46 + this.engineLevel * 165 + Math.abs(throttle) * 14;
+    const base = 52 + this.engineLevel * 235 + Math.abs(throttle) * 18;
     const t = this._now();
     this.engine.osc.frequency.setTargetAtTime(base, t, 0.06);
     this.engine.osc2.frequency.setTargetAtTime(base * 0.5, t, 0.08);
-    this.engine.filter.frequency.setTargetAtTime(320 + this.engineLevel * 1600, t, 0.08);
-    const gain = clamp(this.engineLevel * 0.16, 0, 0.18);
+    this.engine.filter.frequency.setTargetAtTime(420 + this.engineLevel * 2100, t, 0.08);
+    const gain = clamp(0.012 + this.engineLevel * 0.2, 0, 0.22);
     this.engine.gain.gain.setTargetAtTime(gain, t, 0.1);
   }
 

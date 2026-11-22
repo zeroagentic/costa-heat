@@ -106,22 +106,22 @@ export class Vehicle {
     const maxSteer = VEHICLE.steerRate * (1 - clamp(Math.abs(this.speed) / (VEHICLE.maxSpeed * 1.9), 0, 0.55));
     this.steer = damp(this.steer, steerInput * maxSteer, 9, dt);
 
-    const accel = VEHICLE.acceleration;
+    const accel = VEHICLE.acceleration * 2.6;
     let target = this.speed;
 
     if (throttle > 0) {
-      target += accel * throttle * dt * (1 - Math.abs(this.speed) / (VEHICLE.maxSpeed * (this.boosting ? 1.25 : 1)));
+      const t = Math.abs(this.speed) / (VEHICLE.maxSpeed * (this.boosting ? 1.25 : 1));
+      target += accel * throttle * dt * (1 - t * t);
     } else if (throttle < 0) {
       if (this.speed > 1) target -= VEHICLE.brakeForce * dt;           // brake first
-      else target -= accel * 0.55 * dt;                               // then reverse
+      else target -= accel * 0.5 * dt;                                // then reverse
     }
     if (brake || handbrake) target -= VEHICLE.brakeForce * 1.5 * dt * Math.sign(this.speed || 1);
 
     // rolling drag and idle deceleration
     const drag = VEHICLE.drag * this.speed * dt + 0.8 * dt * Math.sign(this.speed);
     if (throttle === 0) target -= drag;
-    this.speed = damp(this.speed, clamp(target, -VEHICLE.reverseSpeed, VEHICLE.maxSpeed), handbrake ? 7 : 22, dt);
-    if (Math.abs(this.speed) < 0.06 && throttle === 0) this.speed = 0;
+    this.speed = clamp(target, -VEHICLE.reverseSpeed, VEHICLE.maxSpeed);
 
     this.braking = brake || handbrake || (throttle < 0 && this.speed > 0.5);
 
@@ -221,13 +221,13 @@ export class Vehicle {
   }
 }
 
-/** Closest car to a point within a radius, skipping cars with drivers other than none or the player. */
+/** Closest car a player on foot could walk up to and drive away. */
 export function nearestVehicle(vehicles, x, z, radius = 5) {
   let best = null;
   let bestD = radius * radius;
   for (const v of vehicles) {
     if (v.destroyed) continue;
-    if (v.driver && v.driver !== 'player' && !v.stolen) continue;
+    // a car with a driver can still be carjacked: that is the point of the game
     const d = v.distanceTo(x, z) ** 2;
     if (d < bestD) { bestD = d; best = v; }
   }

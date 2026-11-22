@@ -9,10 +9,14 @@ import { Traffic, TrafficCar } from './traffic.js';
 import { PedestrianCrowd, Pedestrian } from './pedestrians.js';
 import { Police } from './police.js';
 import { Combat } from './combat.js';
-import { Wanted } from './wanted.js';
+import { Wanted, RESPONSE } from './wanted.js';
 import { Missions } from './missions.js';
 import { Vehicle } from './vehicles.js';
 import { AudioSystem } from './audio.js';
+import { Helicopter } from './helicopter.js';
+import { Roadblocks } from './roadblocks.js';
+import { Garage } from './garage.js';
+import { CAST, castMember, speakerName } from './cast.js';
 import { streamRng } from './random.js';
 import { CITY, GRID, PLAYER, ROAD, clamp, dist, damp } from './config.js';
 import { randomLanePoint, nearestEdge } from './roads.js';
@@ -28,7 +32,7 @@ export class World {
     this.time = 0;
     this.playTime = 0;
     this.cash = 500;
-    this.stats = { kills: 0, arrests: 0, distance: 0, carsStolen: 0 };
+    this.stats = { kills: 0, arrests: 0, distance: 0, carsStolen: 0, missionsDone: 0, garageUsed: 0 };
     this.threatLevel = 0;
     this.controlsActive = false;
     this.deterministic = false;
@@ -44,6 +48,7 @@ export class World {
     this.onKill = (victim) => { this.stats.kills++; };
     this.onOfficerDown = () => { this.stats.kills++; };
     this.timeOfDay = 'sunset';
+    this._lastRadioTaunt = -99;
   }
 
   async build(progress) {
@@ -55,6 +60,7 @@ export class World {
     this.rig = new CameraRig(this.camera, this.city);
     this.wanted = new Wanted();
     this.wanted.onChange = (level) => this._onWantedChange(level);
+    this.wanted.onResponse = (level, response) => this._onWantedResponse(level, response);
     this.traffic = new Traffic(this.scene, this.city, this.laneGraph, streamRng(this.seed, 'traffic'));
     this.traffic.populate();
     this.pedestrians = new PedestrianCrowd(this.scene, this.city, streamRng(this.seed, 'pedestrians'));
@@ -62,6 +68,9 @@ export class World {
     this.police = new Police(this.scene, this.city, this.laneGraph, streamRng(this.seed, 'police'));
     this.police.onArrest = () => this.arrestPlayer();
     this.combat = new Combat(this.scene, this.camera, this.player, this);
+    this.helicopter = new Helicopter(this.scene, this.city, streamRng(this.seed, 'helicopter'));
+    this.roadblocks = new Roadblocks(this.scene, this.city, this.laneGraph, streamRng(this.seed, 'roadblocks'));
+    this.garage = new Garage(this.scene, this.city, this.hud, streamRng(this.seed, 'garage'));
     this.missions = new Missions(this.scene, this.city, this.hud, streamRng(this.seed, 'missions'));
     this.missions.onMissionStarted = (def) => { this.onMissionStarted?.(def); };
     this.onMissionComplete = (def, reward) => this._handleMissionComplete(def, reward);
@@ -69,6 +78,7 @@ export class World {
     this.rig.setMode('foot');
     this.hud.setCash(this.cash);
     this.hud.setHealth(this.player.health, PLAYER.maxHealth);
+    this.hud.setGarage(this.garage.count, this.garage.capacity);
     return this;
   }
 
@@ -91,7 +101,15 @@ export class World {
   allVehicles() {
     const policeCars = this.police.vehicles;
     const stolen = this.stolenVehicle && !this.stolenVehicle.destroyed ? [this.stolenVehicle] : [];
-    return this.traffic.vehicles.filter((v) => !v.destroyed).concat(policeCars, stolen);
+    const garageCars = this.garage ? this.garage.spawned.filter((v) => !v.destroyed) : [];
+    const blockCars = this.roadblocks ? this.roadblocks.blocks.flatMap((b) => b.cars).filter((v) => !v.destroyed) : [];
+    const mission = this.missionVehicles ? this.missionVehicles.filter((v) => !v.destroyed) : [];
+    return this.traffic.vehicles.filter((v) => !v.destroyed).concat(policeCars, stolen, garageCars, blockCars, mission);
+  }
+
+  /** The car the player should consider "theirs" for parking, saving and the minimap. */
+  get playerCar() {
+    return this.player.inVehicle ?? this.stolenVehicle;
   }
 
   // ------------------------------------------------------------- main step
@@ -143,11 +161,19 @@ export class World {
     this.traffic.update(dt, this);
     this.pedestrians.update(dt, this);
     this.police.update(dt, this);
+    this.roadblocks.update(dt, this);
+    this.helicopter.update(dt, this);
+    this.garage.update(dt, this);
     this.combat.update(dt, input ?? this._nullInput());
 
-    // wanted decay (hidden = out of sight of any cop)
+    // wanted decay (hidden = out of sight of any cop, cruiser or the chopper)
     const nearCop = this.police.nearestDistance(this.player);
-    this.wanted.update(dt, nearCop > 55);
+    const chopperNear = this.helicopter.active
+      && Math.hypot(this.helicopter.position.x - this.player.position.x, this.helicopter.position.z - this.player.position.z) < 70;
+    this.wanted.update(dt, nearCop > 55 && !chopperNear);
+
+    // the captain taunts over the radio at high wanted levels
+    this._updateRadio(dt);
 
     // threat level for peds: stars plus nearby violence
     this.threatLevel = this.wanted.level;
@@ -184,15 +210,18 @@ export class World {
     this.hud.setCash(this.cash);
     this.hud.setHealth(this.player.health, PLAYER.maxHealth);
     this.hud.setWanted(this.wanted.level);
-    this.hud.setWeapon('PISTOL', this.combat.ammo, this.combat.reserveAmmo);
+    this.hud.setWeapon(this.combat.weaponName, this.combat.ammo, this.combat.reserveAmmo, this.combat.reloading);
     this.hud.setHurt(this.player.hurtFlash > 0.15);
     const inCar = Boolean(this.player.inVehicle);
     this.hud.setSpeed(inCar, inCar ? this.player.inVehicle.speedMph : 0);
     this.hud.setCrosshair(!inCar && this.player.alive && this.player.aiming);
     this.hud.setArea(this.player.position.x, this.player.position.z);
+    this.hud.setGarage(this.garage.count, this.garage.capacity);
     this.audio?.updateMusic(dt, true);
     if (this.wanted.level > 0 && !this.audio?.siren) this.audio?.sirenOn();
     if (this.wanted.level === 0 && this.audio?.siren) this.audio?.sirenOff();
+    // rotor wash fades in with the helicopter's distance
+    this.audio?.updateRotor(this.helicopter.active ? 1 : 0, dt);
   }
 
   _nullInput() {
@@ -259,10 +288,45 @@ export class World {
   }
 
   _onWantedChange(level, before) {
-    if (level > before) this.hud.showToast(`WANTED LEVEL ${level}`);
-    if (level === 0 && before > 0) this.hud.showToast('YOU LOST THE COPS');
+    if (level > before) this.hud.showToast(`WANTED LEVEL ${level} — ${RESPONSE[level].label}`);
+    if (level === 0 && before > 0) {
+      this.hud.showToast('YOU LOST THE COPS', 3.2);
+      this.hud.showBanner('CLEAR', 1.8);
+      this._lastRadioTaunt = this.time;
+      this.hud.say(speakerName('brisco'), CAST.brisco.lines.lost, 3.4, CAST.brisco.colour);
+    }
     if (level >= 3) this.police.spawnOfficers(this.player, 1);
-    if (level === 0) this.audio?.sirenOff();
+    if (level === 0) {
+      this.audio?.sirenOff();
+      this.roadblocks.clear(this);
+    }
+  }
+
+  /** The response shape changed: hand the level to every system that answers it. */
+  _onWantedResponse(level, response) {
+    this.helicopter?.setWantedLevel(level);
+    if (level >= 5) {
+      // first roadblock goes up immediately, so the lockdown is visible at once
+      if (!this.roadblocks.blocks.length) this.roadblocks.spawnTimer = 0.4;
+    } else {
+      this.roadblocks?.clear(this);
+    }
+    if (level >= 4) this.hud.showBanner(response.label, 2.2);
+  }
+
+  /** Captain Brisco taunts the player over the radio while the heat is on. */
+  _updateRadio(dt) {
+    const level = this.wanted.level;
+    if (level < 4) return;
+    if (this.time - this._lastRadioTaunt < 14) return;
+    this._lastRadioTaunt = this.time;
+    const pool = level >= 5
+      ? [CAST.brisco.lines.l5, CAST.brisco.lines.l5b, CAST.brisco.lines.l4b]
+      : [CAST.brisco.lines.l4, CAST.brisco.lines.l4b];
+    const text = pool[Math.floor(this.time / 14) % pool.length];
+    if (this.hud.dialogueOpen) return;
+    this.hud.say(speakerName('brisco'), text, 4.2, CAST.brisco.colour);
+    this.audio?.radioStatic?.();
   }
 
   addCash(amount) {
@@ -293,6 +357,12 @@ export class World {
     this.missionVehicles = this.missionVehicles ?? [];
     this.missionVehicles.push(v);
     return v;
+  }
+
+  /** Clear mission-spawned cars (called when a mission ends or restarts). */
+  clearMissionVehicles() {
+    for (const v of this.missionVehicles ?? []) this.scene.remove(v.model);
+    this.missionVehicles = [];
   }
 
   enterVehicle(v, silent = false) {

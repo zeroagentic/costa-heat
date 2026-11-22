@@ -1,15 +1,23 @@
 // Police response. Patrol cruisers spawn out of sight on road lanes and chase the player
-// using simple seek steering; at wanted 3+ they fire pistols from the windows. At 4-5
-// officers on foot deploy and shoot. Arrest happens when a cruiser sits next to a
-// wanted player on foot for a moment.
+// using simple seek steering. How many come, and whether officers deploy on foot, is
+// read straight from the wanted system's RESPONSE table:
+//
+//   1 star   one cruiser rolls up and investigates (it does not ram, it watches)
+//   2 stars  two cruisers pursue at full speed
+//   3 stars  three cruisers, officers on foot, pistols from the windows
+//   4 stars  four cruisers, more officers, helicopter (owned by helicopter.js)
+//   5 stars  everything above plus roadblocks (owned by roadblocks.js)
+//
+// Arrest happens when an officer on foot stands next to a wanted player for a moment.
 import * as THREE from 'three';
 import { Vehicle } from './vehicles.js';
 import { buildCharacter, animateCharacter } from './characters.js';
 import { randomLanePoint, nearestEdge } from './roads.js';
 import { clamp, damp, dampAngle, angleDelta, groundHeightAt, isRoadAt } from './config.js';
+import { RESPONSE } from './wanted.js';
 
 const MAX_CRUISERS = 5;
-const MAX_OFFICERS = 6;
+const MAX_OFFICERS = 7;
 
 class Cruiser {
   constructor(scene, city, graph, rng, spawn) {
@@ -136,8 +144,9 @@ class Officer {
     const muzzle = new THREE.Vector3();
     const m = this.weapon.children[0];
     m.getWorldPosition(muzzle);
-    world.audio?.gunshot(0.55, muzzle);
+    world.audio?.gunshot('pistol', 0.55);
     world.combat?.muzzleFlashAt(muzzle, 0.7);
+    world.combat?.tracer(muzzle, new THREE.Vector3(p.position.x, p.position.y + 1.15, p.position.z), 0x9fc0ff, 0.6);
     const hitting = this.rng.next() < clamp(0.7 - dist / 60, 0.14, 0.6);
     if (hitting) {
       const died = p.takeDamage(this.rng.range(4, 8));
@@ -209,7 +218,8 @@ export class Police {
   /** Deploy officers on foot at a point near the player (used by cruisers). */
   spawnOfficers(player, count = 2, near = null) {
     for (let i = 0; i < count; i++) {
-      if (this.officers.length >= MAX_OFFICERS) return;
+      const alive = this.officers.filter((o) => o.alive);
+      if (alive.length >= MAX_OFFICERS) return;
       let base = near;
       if (!base) {
         const a = this.rng.range(0, Math.PI * 2);
@@ -246,22 +256,35 @@ export class Police {
   update(dt, world) {
     const level = world.wanted.level;
     this.want = level;
+    const response = RESPONSE[clamp(level, 0, 5)];
 
-    // spawn to match the star level
-    const wantedCruisers = level === 0 ? 0 : level >= 4 ? 4 : level;
+    // spawn to match the response table: 1 car investigating, up to 4 in a lockdown
+    const wantedCruisers = response.cruisers;
     this.spawnTimer -= dt;
     if (this.cruisers.length < wantedCruisers && this.spawnTimer <= 0) {
-      this.spawnTimer = level >= 4 ? 1.6 : 3.2;
-      const c = this.spawnCruiser(world.player, level >= 4 ? 60 : 90);
-      if (c && level >= 3) this.spawnOfficers(world.player, 1);
+      this.spawnTimer = level >= 4 ? 1.4 : level === 3 ? 2.2 : 3.4;
+      // an investigating patrol rolls up slowly and close; a pursuit comes in hot
+      const c = this.spawnCruiser(world.player, level === 1 ? 42 : level >= 4 ? 58 : 80);
+      if (c) c.investigating = level === 1;
     }
+    // officers on foot deploy from three stars up, scaled by the response table
+    const wantedOfficers = response.officers;
+    const aliveOfficers = this.officers.filter((o) => o.alive).length;
+    if (wantedOfficers > 0 && aliveOfficers < wantedOfficers) {
+      this.officerTimer = (this.officerTimer ?? 0) - dt;
+      if (this.officerTimer <= 0) {
+        this.officerTimer = 2.6;
+        this.spawnOfficers(world.player, 1);
+      }
+    }
+
     // decay: at 0 stars, cruisers give up and disappear one by one
     if (level === 0) {
-      if (this.cruisers.length && this.rng.chance(dt * 0.55)) {
+      if (this.cruisers.length && this.rng.chance(dt * 0.75)) {
         const c = this.cruisers.shift();
         this.scene.remove(c.vehicle.model);
       }
-      if (this.officers.length && this.rng.chance(dt * 0.7)) {
+      if (this.officers.length && this.rng.chance(dt * 0.9)) {
         const o = this.officers.shift();
         this.scene.remove(o.model);
       }
@@ -272,15 +295,15 @@ export class Police {
       if (c.destroyed) continue;
       this._driveCruiser(c, dt, world, level);
     }
-    // only the two nearest officers open fire, so a shootout stays survivable
+    // officers open fire from 3 stars up; the two nearest shoot so a shootout stays survivable
     const armed = this.officers
       .filter((o) => o.alive)
       .sort((a, b) => (
         Math.hypot(a.position.x - p.position.x, a.position.z - p.position.z) -
         Math.hypot(b.position.x - p.position.x, b.position.z - p.position.z)
       ))
-      .slice(0, 2);
-    for (const o of this.officers) o.update(dt, world, armed.includes(o) && level >= 4);
+      .slice(0, level >= 5 ? 4 : 2);
+    for (const o of this.officers) o.update(dt, world, armed.includes(o) && level >= 3);
 
     this._checkArrest(dt, world);
   }
@@ -330,6 +353,11 @@ export class Police {
     let wantedSpeed = clamp(dist * 0.75, 0, 26 + level * 2.4);
     if (dist < 7 && !p.inVehicle) wantedSpeed = 0;
     if (dist < 12 && p.inVehicle) wantedSpeed = Math.max(p.inVehicle.speed + 3, 8);
+    // a one-star patrol investigates instead of ramming: it closes to a watching distance
+    if (level === 1) {
+      wantedSpeed = clamp(dist - 14, 0, 14);
+      if (dist < 16 && dist > 9) wantedSpeed = 0;
+    }
     c.speed = damp(c.speed, wantedSpeed, 2.4, dt);
 
     const throttle = c.speed > v.speed + 0.5 ? 1 : c.speed < v.speed - 1 ? -1 : 0;
@@ -359,8 +387,9 @@ export class Police {
     if (level >= 3 && c.fireCooldown <= 0 && dist < 34 && hasLineOfSight(world, v.position, p)) {
       c.fireCooldown = this.rng.range(1.6, 3.2) * (level >= 5 ? 0.75 : 1);
       const muzzle = new THREE.Vector3(v.position.x, v.position.y + 1.3, v.position.z);
-      world.audio?.gunshot(0.6, muzzle);
+      world.audio?.gunshot('pistol', 0.6);
       world.combat?.muzzleFlashAt(muzzle, 0.8);
+      world.combat?.tracer(muzzle, new THREE.Vector3(p.position.x, p.position.y + 1.1, p.position.z), 0x9fc0ff, 0.7);
       if (this.rng.next() < 0.35) {
         const died = p.takeDamage(this.rng.range(3, 7));
         world.onPlayerHurt?.(died);

@@ -1,5 +1,11 @@
 // Tunable constants and small maths helpers shared by every system.
 // World axis: +X is east (toward the sea), +Z is south. One unit is one metre.
+// The city has a name of its own (VISTA MAR) and every district has a name; the HUD,
+// the minimap and the mission text all read them from here.
+
+export const CITY_NAME = 'VISTA MAR';
+export const CITY_TAGLINE = 'Sun. Sand. Blood money.';
+export const AVENUE_NAME = 'AVENIDA COSTA';
 
 export const ROAD = {
   halfWidth: 9,          // asphalt half width, 18 m road (two lanes each way)
@@ -108,11 +114,32 @@ export function districtAt(x, z) {
   return 'midtown';
 }
 
+/** Named neighbourhoods of Vista Mar. Every district the player can stand in has a name. */
 export const AREA_NAMES = {
-  beach: 'VICE BEACH',
-  ocean: 'OCEAN DRIVE',
-  downtown: 'DOWNTOWN',
-  midtown: 'MIDTOWN',
-  marina: 'MARINA DISTRICT',
-  north: 'NORTH SHORE',
+  beach: 'PLAYA DORADA',
+  ocean: 'AVENIDA COSTA',
+  downtown: 'TORRE ALTA',
+  midtown: 'CENTRO VIEJO',
+  marina: 'CALETA MARINA',
+  north: 'PUNTA NORTE',
 };
+
+/** One-line character note per district, used in mission briefs and the map legend. */
+export const AREA_BLURBS = {
+  beach: 'The sand where every deal goes bad.',
+  ocean: 'The promenade strip: motels, neon, Sal Duarte.',
+  downtown: 'Glass towers, old money, Rourke lawyers.',
+  midtown: 'Cuban cafes and lock-ups nobody asks about.',
+  marina: 'Rourke\'s docks — freight, cash, no witnesses.',
+  north: 'The quiet end of the strip. Too quiet.',
+};
+
+/** Where to print each district name on the minimap (world metres). */
+export const DISTRICT_LABELS = [
+  { key: 'downtown', name: AREA_NAMES.downtown, x: -320, z: 0 },
+  { key: 'midtown', name: AREA_NAMES.midtown, x: -70, z: -60 },
+  { key: 'ocean', name: AREA_NAMES.ocean, x: 140, z: -30 },
+  { key: 'beach', name: AREA_NAMES.beach, x: 245, z: 120 },
+  { key: 'marina', name: AREA_NAMES.marina, x: 40, z: 330 },
+  { key: 'north', name: AREA_NAMES.north, x: -60, z: -330 },
+];

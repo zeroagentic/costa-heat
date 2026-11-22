@@ -21,19 +21,22 @@
     <div id="mission-panel">
       <div class="eyebrow">MISSION</div>
       <h3 id="mission-title">—</h3>
+      <div id="mission-giver">—</div>
       <ul id="mission-objectives"></ul>
     </div>
 
     <div id="top-right">
       <div id="wanted" aria-label="wanted level"></div>
+      <div id="wanted-label"></div>
       <div id="cash">$0</div>
     </div>
 
     <div id="minimap-wrap">
       <canvas id="minimap" width="360" height="360"></canvas>
       <div id="compass-n">N</div>
-      <div id="area-name">VICE BEACH</div>
+      <div id="area-name">PLAYA DORADA</div>
     </div>
+    <div id="district-name">VISTA MAR · PLAYA DORADA</div>
 
     <div id="health-panel">
       <div class="row">
@@ -41,6 +44,10 @@
         <span id="ammo">12 / 12</span>
       </div>
       <div id="health-bar"><div id="health-fill"></div></div>
+      <div class="row sub">
+        <span id="garage-count">GARAGE 0/4</span>
+        <span id="weapon-hint">Q SWAP · R RELOAD</span>
+      </div>
     </div>
 
     <div id="prompt"></div>
@@ -63,12 +70,14 @@
   <div id="title-screen" class="screen">
     <div class="screen-bg"></div>
     <div class="title-block">
-      <div class="kicker">VICE COUNTY · FLORIDA KEYS · 1986</div>
+      <div class="kicker">VISTA MAR · FLORIDA KEYS · 1986</div>
       <h1>COSTA<span>HEAT</span></h1>
       <p class="tagline">Sun. Sand. Blood money.</p>
+      <p class="byline">A VISTA MAR CRIME STORY — YOU ARE <b>MARISOL “SOL” VEGA</b></p>
       <div class="menu">
         <button class="btn primary" id="btn-continue">Continue</button>
         <button class="btn" id="btn-new">New Game</button>
+        <button class="btn ghost" id="btn-slot2">Slot 2</button>
       </div>
       <div class="controls">
         <div><b>WASD</b> move</div>
@@ -77,6 +86,10 @@
         <div><b>SPACE</b> jump / handbrake</div>
         <div><b>E</b> enter / exit vehicle</div>
         <div><b>CLICK</b> fire</div>
+        <div><b>Q</b> swap weapon</div>
+        <div><b>R</b> reload</div>
+        <div><b>G</b> store car in garage</div>
+        <div><b>F5/F6</b> save slot 1 / 2</div>
         <div><b>ESC</b> pause</div>
         <div><b>M</b> mute audio</div>
       </div>
@@ -87,11 +100,13 @@
   <div id="pause-screen" class="screen hidden">
     <div class="screen-bg dim"></div>
     <div class="pause-block">
-      <div class="kicker">PAUSED</div>
+      <div class="kicker">PAUSED · VISTA MAR</div>
       <h2>COSTA HEAT</h2>
       <div class="menu">
         <button class="btn primary" id="btn-resume">Resume</button>
-        <button class="btn" id="btn-save">Save Game</button>
+        <button class="btn" id="btn-save">Save Slot 1</button>
+        <button class="btn" id="btn-save2">Save Slot 2</button>
+        <button class="btn" id="btn-load2">Load Slot 2</button>
         <button class="btn" id="btn-title">Quit to Title</button>
       </div>
       <div class="save-status" id="save-status"></div>

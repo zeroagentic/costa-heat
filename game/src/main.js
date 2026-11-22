@@ -9,9 +9,10 @@ import { AudioSystem } from './audio.js';
 import { Hud } from './hud.js';
 import { Minimap } from './minimap.js';
 import { ShotDirector, parseShotParams } from './shots.js';
-import { saveGame, loadGame, hasSave, applySave, clearSave } from './save.js';
+import { saveGame, loadGame, hasSave, applySave, clearSave, slotInfo } from './save.js';
 import { nearestVehicle } from './vehicles.js';
-import { SHOT } from './config.js';
+import { CAST } from './cast.js';
+import { SHOT, CITY_NAME } from './config.js';
 
 const canvas = document.getElementById('scene-canvas');
 const fadeEl = document.getElementById('fade');
@@ -87,7 +88,12 @@ async function boot() {
     hud.setCash(world.cash);
     hud.setWanted(world.wanted.level);
     titleEl.classList.add('hidden');
+    // shots are captured headless, where a CSS opacity transition may not advance:
+    // take the fade overlay out of the frame outright so the render is not dimmed
     fadeEl.classList.add('clear');
+    fadeEl.style.transition = 'none';
+    fadeEl.style.opacity = '0';
+    fadeEl.style.display = 'none';
     mode = 'shot';
     world.controlsActive = false;
     // one final settle pass with the staged camera so the first frame is the shot
@@ -98,33 +104,66 @@ async function boot() {
 
   titleEl.classList.remove('hidden');
   fadeEl.classList.add('clear');
-  const cont = document.getElementById('btn-continue');
-  if (!hasSave()) {
-    cont.disabled = true;
-    cont.style.opacity = '0.4';
-    cont.textContent = 'Continue';
-  }
+  refreshSlotButtons();
   mode = 'title';
   world.player.setVisible(false);
   hud.hide();
 
   // Menu buttons
   document.getElementById('btn-new').addEventListener('click', () => {
-    clearSave();
-    startPlay(null);
+    clearSave(1);
+    startPlay(null, 1);
   });
-  cont.addEventListener('click', () => {
-    if (!hasSave()) return;
-    startPlay(loadGame());
+  document.getElementById('btn-continue').addEventListener('click', () => {
+    if (!hasSave(1)) return;
+    startPlay(loadGame(1), 1);
+  });
+  document.getElementById('btn-slot2').addEventListener('click', () => {
+    startPlay(hasSave(2) ? loadGame(2) : null, 2);
   });
   document.getElementById('btn-resume').addEventListener('click', () => resumeGame());
   document.getElementById('btn-save').addEventListener('click', () => {
-    const ok = saveGame(world);
-    saveStatus.textContent = ok ? 'GAME SAVED' : 'SAVE FAILED';
+    const ok = saveGame(world, 1);
+    saveStatus.textContent = ok ? 'SAVED TO SLOT 1' : 'SAVE FAILED';
+    refreshSlotButtons();
+  });
+  document.getElementById('btn-save2').addEventListener('click', () => {
+    const ok = saveGame(world, 2);
+    saveStatus.textContent = ok ? 'SAVED TO SLOT 2' : 'SAVE FAILED';
+    refreshSlotButtons();
+  });
+  document.getElementById('btn-load2').addEventListener('click', () => {
+    const data = loadGame(2);
+    if (!data) { saveStatus.textContent = 'SLOT 2 IS EMPTY'; return; }
+    pauseEl.classList.add('hidden');
+    hud.show();
+    world.player.reset();
+    world.player.setVisible(true);
+    applySave(world, data);
+    world.state = 'play';
+    mode = 'play';
+    world.controlsActive = true;
+    fadeEl.classList.add('clear');
+    saveStatus.textContent = 'LOADED SLOT 2';
+    input.requestLock();
   });
   document.getElementById('btn-title').addEventListener('click', () => quitToTitle());
 
   requestAnimationFrame(frame);
+}
+
+/** Update the title/pause buttons to say what each slot holds. */
+function refreshSlotButtons() {
+  const cont = document.getElementById('btn-continue');
+  const slot2 = document.getElementById('btn-slot2');
+  if (!cont || !slot2) return;
+  const s1 = slotInfo(1);
+  const s2 = slotInfo(2);
+  cont.disabled = s1.empty;
+  cont.style.opacity = s1.empty ? '0.4' : '1';
+  cont.textContent = s1.empty ? 'Continue' : `Continue · $${s1.cash.toLocaleString('en-US')}`;
+  slot2.textContent = s2.empty ? 'Slot 2 (empty)' : `Slot 2 · $${s2.cash.toLocaleString('en-US')}`;
+  slot2.style.opacity = s2.empty ? '0.5' : '1';
 }
 
 function wireWorldCallbacks() {
@@ -133,7 +172,7 @@ function wireWorldCallbacks() {
   world.audio = audio;
 }
 
-function startPlay(saveData) {
+function startPlay(saveData, slot = 1) {
   audio.start();
   titleEl.classList.add('hidden');
   fadeEl.classList.remove('clear');
@@ -141,9 +180,12 @@ function startPlay(saveData) {
   world.player.reset();
   world.player.setVisible(true);
   world.missions.restore({ index: 0 });
+  world.missions.clearMissionVehicles?.();
   world.cash = 500;
   world.wanted.clear();
   world.police.clearAll();
+  world.roadblocks.clear(world);
+  world.helicopter.retire();
   world.rig.setMode('foot');
   world.rig.yaw = Math.PI * 0.5;
   if (saveData) applySave(world, saveData);
@@ -158,7 +200,9 @@ function startPlay(saveData) {
     lastTime = performance.now();
     requestAnimationFrame(frame);
   }
-  hud.say('SAL', saveData ? 'Back for more? The Keys never forget a face.' : 'Fresh off the bus. Sal runs this stretch of Ocean Drive — talk to me when you want work.', 5);
+  const sal = CAST.sal;
+  hud.say(sal.short ?? sal.name, saveData ? sal.lines.return : sal.lines.greeting, 5, sal.colour);
+  hud.showToast(`${CITY_NAME} · SLOT ${slot}`);
 }
 
 function resumeGame() {
@@ -216,6 +260,22 @@ function handleGlobalKeys() {
       }
     }
   }
+  // garage: store the car you are driving, or roll one back out
+  if (input.wasPressed('garage')) {
+    if (world.garage.nearPad(world.player.position.x, world.player.position.z)) {
+      if (world.player.inVehicle) world.garage.store(world);
+      else world.garage.retrieve(world);
+    } else {
+      hud.showToast('NO GARAGE HERE — VEGA\'S LOCK-UP, AVENIDA COSTA');
+    }
+  }
+  // save slots from the keyboard
+  if (input.wasPressed('save1') || input.wasPressed('save2')) {
+    const slot = input.wasPressed('save2') ? 2 : 1;
+    const ok = saveGame(world, slot);
+    hud.showToast(ok ? `SAVED — SLOT ${slot}` : 'SAVE FAILED');
+    refreshSlotButtons();
+  }
   // start the mission when the prompt says so (missions.canStart handled above via E)
   if (input.wasPressed('confirm') && world.missions.canStart(world) && !world.player.inVehicle) {
     world.missions.begin(world);
@@ -226,7 +286,15 @@ function updateInteractPrompt() {
   if (mode !== 'play') return;
   const p = world.player;
   if (p.inVehicle) {
+    if (world.garage.nearPad(p.position.x, p.position.z)) {
+      hud.setPrompt('<b>E</b> LEAVE VEHICLE &nbsp;·&nbsp; <b>G</b> STORE IN GARAGE');
+      return;
+    }
     hud.setPrompt('<b>E</b> LEAVE VEHICLE');
+    return;
+  }
+  if (world.garage.nearPad(p.position.x, p.position.z)) {
+    hud.setPrompt('<b>G</b> ROLL OUT A STORED CAR');
     return;
   }
   const car = nearestVehicle(world.allVehicles(), p.position.x, p.position.z, 4.6);
@@ -235,7 +303,7 @@ function updateInteractPrompt() {
     return;
   }
   if (world.missions.canStart(world)) {
-    hud.setPrompt('<b>E</b> TALK TO SAL');
+    hud.setPrompt(`<b>E</b> TALK TO ${world.missions.giverName}`);
     return;
   }
   hud.setPrompt('');
@@ -247,13 +315,14 @@ function frame(now) {
   lastTime = now;
 
   if (mode === 'shot') {
-    // A shot is a fixed-length movie: exactly SHOT_FRAMES simulation steps, then hold
-    // the final frame. Nothing about the image depends on the real frame rate.
-    const dt = FIXED;
-    if (shotFrames < SHOT_FRAMES) {
+    // A shot is a fixed-length movie: the staging already ran its deterministic warm-up,
+    // and then the camera is posed. Frame count never changes the world, so the same
+    // seed and shot always produce the same picture.
+    if (shotFrames < 2) {
       shotFrames++;
-      world.stepSimulation(dt, { scripted: true });
-      world.renderFrame(dt, director);
+      director.poseFinal();
+      world.hud.update(0);
+      world.minimap.draw(world);
       renderer.render(world.scene, world.camera);
     }
     return;
@@ -273,7 +342,11 @@ function frame(now) {
   }
 
   if (mode === 'paused') {
+    // input still has to be polled while paused, or Escape can never resume
+    handleGlobalKeys();
+    world.renderFrame(raw, null);
     renderer.render(world.scene, world.camera);
+    input.endFrame();
     return;
   }
 

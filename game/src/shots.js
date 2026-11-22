@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { streamRng } from './random.js';
 import { nearestEdge, edgeYaw } from './roads.js';
 import { CITY, clamp } from './config.js';
+import { castMember } from './cast.js';
 
 export const SHOT_NAMES = ['drive', 'chase', 'mission', 'city'];
 
@@ -115,7 +116,8 @@ export class ShotDirector {
     settle(world, 70, 1 / 60, { throttle: 1, steer: 0 });
     car.speed = Math.max(car.speed, 25);
     world.wanted.setLevel(2);
-    world.hud.showToast('OCEAN DRIVE');
+    world.hud.say(castMember('sal').name, castMember('sal').lines.return, 6);
+    world.hud.showToast('OCEAN DRIVE  ·  MARISOL');
     return { hud: true, freezeInput: true };
   }
 
@@ -201,8 +203,26 @@ export class ShotDirector {
       world.camera.fov = 46;
       world.camera.updateProjectionMatrix();
     };
-    world.wanted.setLevel(4);
-    world.hud.showToast('WANTED — 4 STARS');
+    // five stars: the helicopter is up (Air One) and a roadblock stands on the road ahead,
+    // so this one frame shows the pursuit, the air unit and the blockade at once.
+    world.wanted.setLevel(5);
+    world.wanted.refresh(0);
+
+    // Air One overhead and just ahead, rotors turning, searchlight on the player
+    world.helicopter.deploy({ x: world.player.position.x + 6, y: 26, z: world.player.position.z - 26 });
+    for (let i = 0; i < 12; i++) world.helicopter.update(1 / 60, world);
+    if (world.helicopter.searchlight) world.helicopter.searchlight.visible = true;
+
+    // a real roadblock on the road ahead: update() spawns blocks only at 5 stars, so drive
+    // the system forward until one stands in front of the player
+    if (world.roadblocks) {
+      for (let i = 0; i < 240 && world.roadblocks.blocks.length === 0; i++) {
+        world.roadblocks.update(1 / 60, world);
+      }
+    }
+
+    world.hud.say(castMember('brisco').name, castMember('brisco').lines.l5, 6);
+    world.hud.showToast('WANTED — 5 STARS  ·  CITY LOCKDOWN');
     return { hud: true, freezeInput: true };
   }
 
@@ -246,7 +266,8 @@ export class ShotDirector {
     rig.distance = 0.68;
 
     settle(world, 40);
-    world.hud.showToast('BRIEFCASE: 1:38');
+    world.hud.say(castMember('sal').name, castMember('sal').lines.arcWarn, 6);
+    world.hud.showToast('BRIEFCASE  ·  1:38');
     return { hud: true, freezeInput: true };
   }
 
@@ -294,6 +315,12 @@ export class ShotDirector {
     };
     this.cameraFn();
     return { hud: true, freezeInput: true, cinematic: true };
+  }
+
+  /** Pose the camera for the final frame; called after staging, no further simulation. */
+  poseFinal() {
+    this.time = 0.6;
+    if (this.cameraFn) this.cameraFn(0);
   }
 
   /** Per-frame work while a staged shot is live. */

@@ -1,7 +1,7 @@
 // Live circular minimap drawn on a 2D canvas: the road grid, the beach, the player's
-// rotating arrow, traffic, pedestrians, police and mission markers. North-up, player
-// centred, with a rotating arrow showing the player's facing.
-import { GRID, ROAD, CITY } from './config.js';
+// rotating arrow, traffic, pedestrians, police, the helicopter, the garage and mission
+// markers — plus the NAMES of every Vista Mar district painted across the map.
+import { GRID, ROAD, CITY, DISTRICT_LABELS, AREA_NAMES, districtAt } from './config.js';
 
 const SIZE = 360;
 const SCALE = 2.55;     // pixels per world metre at the map's edge... (world radius shown)
@@ -109,12 +109,63 @@ export class Minimap {
       ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
     }
 
+    // district names, painted onto the map itself
+    this._drawDistrictNames(ctx, p, scale);
+
+    // roadblocks: real barriers the player can hit, drawn as red-and-white bars
+    if (world.roadblocks) {
+      for (const rb of world.roadblocks.blocks) {
+        const m = this._project(rb.x, rb.z, p.x, p.z, scale);
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.rotate(-rb.yaw);
+        ctx.fillStyle = '#ff4a5e';
+        ctx.fillRect(-5, -1.6, 10, 3.2);
+        ctx.fillStyle = '#f4f4f4';
+        ctx.fillRect(-2, -1.6, 1.6, 3.2);
+        ctx.fillRect(1.4, -1.6, 1.6, 3.2);
+        ctx.restore();
+      }
+    }
+
+    // the garage: a gold wrench-style square with a G
+    if (world.garage) {
+      const g = world.garage.position;
+      const m = this._project(g.x, g.z, p.x, p.z, scale);
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.fillStyle = 'rgba(255,209,102,0.92)';
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.fillStyle = '#14100a';
+      ctx.font = 'bold 8px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('G', 0, 3);
+      ctx.restore();
+    }
+
     // mission markers (diamonds) and the mission car
     if (world.missions) {
       for (const marker of world.missions.activeMarkers()) {
         const m = this._project(marker.x, marker.z, p.x, p.z, scale);
         this._diamond(ctx, m.x, m.y, 6, marker.colour ?? '#ffd166');
       }
+    }
+
+    // police helicopter: a rotor cross low over the chase
+    if (world.helicopter && world.helicopter.active) {
+      const h = world.helicopter.position;
+      const m = this._project(h.x, h.z, p.x, p.z, scale);
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.strokeStyle = '#7ea8ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-6, 0); ctx.lineTo(6, 0);
+      ctx.moveTo(0, -6); ctx.lineTo(0, 6);
+      ctx.stroke();
+      ctx.fillStyle = '#dbe8ff';
+      ctx.fillRect(-2, -2, 4, 4);
+      ctx.restore();
     }
 
     // police
@@ -200,6 +251,40 @@ export class Minimap {
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
+  }
+
+  /** Paint every district name on the map, clipped to the disc and faded near the rim. */
+  _drawDistrictNames(ctx, p, scale) {
+    const R = SIZE / 2;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const d of DISTRICT_LABELS) {
+      const m = this._project(d.x, d.z, p.x, p.z, scale);
+      const dx = m.x - R, dy = m.y - R;
+      const distFromCentre = Math.hypot(dx, dy);
+      if (distFromCentre > R + 40) continue;
+      const fade = distFromCentre > R - 46 ? 0.28 : 0.85;
+      ctx.font = 'bold 10px "Arial Narrow", Arial';
+      ctx.fillStyle = `rgba(190,240,255,${fade})`;
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 4;
+      const words = d.name.split(' ');
+      if (words.length > 1) {
+        words.forEach((w, i) => ctx.fillText(w, m.x, m.y + (i - (words.length - 1) / 2) * 11));
+      } else {
+        ctx.fillText(d.name, m.x, m.y);
+      }
+      // a tiny district tick so the label reads as a place, not a HUD artifact
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = `rgba(190,240,255,${fade * 0.5})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(m.x - 8, m.y - 14);
+      ctx.lineTo(m.x + 8, m.y - 14);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   _diamond(ctx, x, y, r, color) {

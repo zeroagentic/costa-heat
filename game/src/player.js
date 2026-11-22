@@ -23,6 +23,20 @@ export class Player {
     // pistol held in the right hand group
     this.weapon = this._buildPistol();
     joints.rightArm.add(this.weapon);
+    this.weaponModels = { pistol: this.weapon };
+    this.weaponModels.shotgun = this._buildShotgun();
+    this.weaponModels.smg = this._buildSmg();
+    for (const [id, model] of Object.entries(this.weaponModels)) {
+      if (id === 'pistol') continue;
+      model.visible = false;
+      joints.rightArm.add(model);
+    }
+    this.currentWeapon = 'pistol';
+    this.muzzlePoints = {};
+    for (const [id, model] of Object.entries(this.weaponModels)) {
+      this.muzzlePoints[id] = model.userData.muzzle;
+    }
+    this.muzzlePoint = this.muzzlePoints.pistol;
 
     this.position = new THREE.Vector3(PLAYER.startX, 0, PLAYER.startZ);
     this.velocity = new THREE.Vector3();
@@ -56,8 +70,81 @@ export class Player {
     muzzle.position.set(0, -0.72, 0.26);
     g.add(muzzle);
     g.userData.muzzle = muzzle;
-    this.muzzlePoint = muzzle;
     return g;
+  }
+
+  /** Pump-action shotgun: long barrel, wooden stock, wide receiver. */
+  _buildShotgun() {
+    const g = new THREE.Group();
+    const metal = new THREE.MeshStandardMaterial({ color: 0x1c2026, metalness: 0.82, roughness: 0.3 });
+    const wood = new THREE.MeshStandardMaterial({ color: 0x5a3b22, roughness: 0.72 });
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.66, 8), metal);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, -0.7, 0.32);
+    g.add(barrel);
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.52, 8), metal);
+    tube.rotation.x = Math.PI / 2;
+    tube.position.set(0, -0.76, 0.28);
+    g.add(tube);
+    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.09, 0.24), metal);
+    receiver.position.set(0, -0.7, 0.02);
+    g.add(receiver);
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.3), wood);
+    stock.position.set(0, -0.76, -0.2);
+    stock.rotation.x = -0.08;
+    g.add(stock);
+    const pump = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.062, 0.18), wood);
+    pump.position.set(0, -0.76, 0.2);
+    g.add(pump);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, -0.7, 0.66);
+    g.add(muzzle);
+    g.userData.muzzle = muzzle;
+    return g;
+  }
+
+  /** Compact SMG: stubby receiver, stick magazine, folding stock. */
+  _buildSmg() {
+    const g = new THREE.Group();
+    const metal = new THREE.MeshStandardMaterial({ color: 0x24272d, metalness: 0.78, roughness: 0.36 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.75 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.11, 0.34), metal);
+    body.position.set(0, -0.7, 0.1);
+    g.add(body);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.22, 8), metal);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, -0.68, 0.36);
+    g.add(barrel);
+    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.2, 0.07), dark);
+    mag.position.set(0, -0.84, 0.08);
+    mag.rotation.x = 0.18;
+    g.add(mag);
+    const grip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.13, 0.06), dark);
+    grip.position.set(0, -0.8, -0.04);
+    g.add(grip);
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.2), metal);
+    stock.position.set(0, -0.7, -0.2);
+    g.add(stock);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, -0.68, 0.48);
+    g.add(muzzle);
+    g.userData.muzzle = muzzle;
+    return g;
+  }
+
+  /** Called by combat when the weapon swaps: show one model, hide the rest. */
+  setWeaponModel(id) {
+    if (!this.weaponModels || !this.weaponModels[id]) return;
+    this.currentWeapon = id;
+    for (const [key, model] of Object.entries(this.weaponModels)) model.visible = key === id;
+    this.muzzlePoint = this.muzzlePoints[id] ?? this.muzzlePoints.pistol;
+    this.weapon = this.weaponModels[id];
+    this.weaponSwapTimer = 0.25;
+  }
+
+  /** Recoil kick for the camera and the gun hand. */
+  recoilPulse(amount = 1) {
+    this.recoil = Math.min(1.4, (this.recoil ?? 0) + 0.35 * amount);
   }
 
   reset(x = PLAYER.startX, z = PLAYER.startZ) {
@@ -223,6 +310,12 @@ export class Player {
       aim: aiming, lean, flee: false,
     });
     this.weapon.visible = aiming || this.combatReady === true;
+    // recoil kicks the gun hand back and bleeds off
+    if (this.recoil > 0) {
+      this.recoil = Math.max(0, this.recoil - dt * 5.5);
+      this.joints.rightArm.rotation.x -= this.recoil * 0.5;
+      this.model.position.z += this.recoil * 0.05;
+    }
 
     this.model.position.set(this.position.x, this.position.y, this.position.z);
     this.model.rotation.y = this.yaw;

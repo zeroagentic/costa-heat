@@ -58,7 +58,7 @@ html, body {
   margin-bottom: 3px;
 }
 #mission-panel h3 {
-  margin: 0 0 7px;
+  margin: 0 0 3px;
   font-family: var(--display);
   font-size: 21px;
   font-weight: 400;
@@ -66,6 +66,14 @@ html, body {
   text-transform: uppercase;
   color: #ffffff;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+}
+#mission-giver {
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 7px;
+  text-transform: uppercase;
 }
 #mission-objectives { list-style: none; margin: 0; padding: 0; }
 #mission-objectives li {
@@ -102,6 +110,16 @@ html, body {
   text-align: right;
 }
 #wanted { display: flex; gap: 5px; justify-content: flex-end; height: 30px; }
+#wanted-label {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+  color: #ff6a9a;
+  height: 12px;
+  opacity: 0;
+  text-shadow: 0 1px 6px #000;
+}
+#wanted-label.on { opacity: 1; }
 #wanted .star {
   font-size: 25px;
   line-height: 30px;
@@ -159,6 +177,18 @@ html, body {
   color: rgba(233, 247, 255, 0.8);
   text-shadow: 0 1px 4px #000;
 }
+#district-name {
+  position: absolute;
+  left: 26px;
+  bottom: 220px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: rgba(167, 226, 255, 0.9);
+  text-shadow: 0 2px 8px #000, 0 0 14px rgba(0, 0, 0, 0.8);
+  padding-left: 4px;
+  border-left: 2px solid rgba(69, 240, 255, 0.5);
+}
 
 #health-panel {
   position: absolute;
@@ -178,6 +208,16 @@ html, body {
 }
 #health-panel #weapon-name { color: var(--cyan); }
 #health-panel #ammo { color: #fff; font-size: 13px; }
+#health-panel #ammo.low { color: #ff5a6a; animation: lowHealth 0.7s ease-in-out infinite; }
+#health-panel .row.sub {
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-size: 8.5px;
+  letter-spacing: 0.2em;
+  color: rgba(185, 209, 226, 0.6);
+}
+#health-panel #garage-count { color: #8fe6ff; }
+#health-panel #garage-count.full { color: var(--gold); }
 #health-bar {
   height: 11px;
   background: rgba(6, 10, 16, 0.72);
@@ -416,12 +456,21 @@ html, body {
   text-shadow: 0 0 4px #fff, 0 0 26px rgba(69, 240, 255, 0.9), 0 0 70px rgba(69, 240, 255, 0.45);
 }
 .tagline {
-  margin: 10px 0 26px;
+  margin: 10px 0 8px;
   font-size: 15px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: #ffe6f0;
 }
+.byline {
+  margin: 0 0 26px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 222, 240, 0.82);
+}
+.byline b { color: var(--cyan); font-weight: 700; }
+.btn.ghost { opacity: 0.62; padding: 12px 18px; }
 .menu { display: flex; gap: 12px; flex-wrap: wrap; }
 .btn {
   pointer-events: auto;

@@ -1,6 +1,10 @@
 // HUD: cash, health, wanted stars, mission checklist, weapon/ammo, prompts, dialogue,
 // toasts and the damage vignette. Reads world state each frame; owns only DOM.
-import { AREA_NAMES, districtAt } from './config.js';
+//
+// Dialogue is a QUEUE of scripted lines: a mission hands over 2-4 {speaker, name, text}
+// entries and they play one after another in the box at the bottom of the screen, each
+// with its speaker's name painted in that character's colour.
+import { AREA_NAMES, CITY_NAME, districtAt } from './config.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,6 +16,7 @@ export class Hud {
     this.wantedEl = $('wanted');
     this.missionPanel = $('mission-panel');
     this.missionTitle = $('mission-title');
+    this.missionGiver = $('mission-giver');
     this.missionList = $('mission-objectives');
     this.weaponName = $('weapon-name');
     this.ammoEl = $('ammo');
@@ -27,6 +32,9 @@ export class Hud {
     this.speedo = $('speedo');
     this.speedValue = $('speed-value');
     this.areaEl = $('area-name');
+    this.districtEl = $('district-name');
+    this.wantedLabel = $('wanted-label');
+    this.garageEl = $('garage-count');
 
     this.stars = [];
     for (let i = 0; i < 5; i++) {
@@ -39,9 +47,11 @@ export class Hud {
     this.toastTimer = 0;
     this.bannerTimer = 0;
     this.dialogueTimer = 0;
+    this.dialogueQueue = [];
     this.lastCash = -1;
     this.lastHealth = -1;
     this.lastStars = -1;
+    this.lastAmmo = '';
     this.lastArea = '';
     this.objectiveSignature = '';
     this.hurt = 0;
@@ -75,11 +85,20 @@ export class Hud {
     this.lastStars = level;
     this.stars.forEach((s, i) => s.classList.toggle('lit', i < level));
     this.vignette.classList.toggle('cop', level >= 4);
+    if (this.wantedLabel) {
+      const words = ['', 'INVESTIGATING', 'PURSUIT', 'ARMED RESPONSE', 'AIR SUPPORT', 'CITY LOCKDOWN'];
+      this.wantedLabel.textContent = words[level] ?? '';
+      this.wantedLabel.classList.toggle('on', level > 0);
+    }
   }
 
-  setWeapon(name, ammo, reserve) {
-    this.weaponName.textContent = name;
-    this.ammoEl.textContent = `${ammo} / ${reserve}`;
+  setWeapon(name, ammo, reserve, reloading = false) {
+    const sig = `${name}|${ammo}|${reserve}|${reloading}`;
+    if (sig === this.lastAmmo) return;
+    this.lastAmmo = sig;
+    this.weaponName.textContent = reloading ? `${name} · RELOAD` : name;
+    this.ammoEl.textContent = reloading ? '— / —' : `${ammo} / ${reserve}`;
+    this.ammoEl.classList.toggle('low', !reloading && ammo <= 3);
   }
 
   setMission(mission) {
@@ -89,6 +108,10 @@ export class Hud {
     }
     this.missionPanel.style.display = 'block';
     this.missionTitle.textContent = mission.title;
+    if (this.missionGiver) {
+      this.missionGiver.textContent = mission.giver ? `FOR ${mission.giver}` : '';
+      this.missionGiver.style.color = mission.giverColour ?? '#ff3d8b';
+    }
     const sig = mission.objectives.map((o) => `${o.text}:${o.state}`).join('|');
     if (sig !== this.objectiveSignature) {
       this.objectiveSignature = sig;
@@ -137,11 +160,36 @@ export class Hud {
     this.bannerTimer = seconds;
   }
 
-  say(name, text, seconds = 4) {
-    this.dialogueName.textContent = name;
-    this.dialogueText.textContent = text;
-    this.dialogue.classList.add('on');
+  /** One line, immediate. `colour` paints the speaker's name. */
+  say(name, text, seconds = 4, colour = null) {
+    this.dialogueQueue.length = 0;
+    this._showLine({ name, text, colour });
     this.dialogueTimer = seconds;
+  }
+
+  /**
+   * A scripted run of lines from a mission: [{speaker, name, text, colour}, ...].
+   * Each line holds for `perLine` seconds and the next follows automatically, so the
+   * box always carries a named speaker and a full sentence.
+   */
+  sayLines(script, perLine = 4.2) {
+    const lines = (script ?? []).filter(Boolean);
+    if (!lines.length) return;
+    this.dialogueQueue = lines.slice(1).map((l) => ({ ...l, hold: perLine }));
+    this._showLine(lines[0]);
+    this.dialogueTimer = perLine;
+    this.lineHold = perLine;
+  }
+
+  _showLine(line) {
+    this.dialogueName.textContent = line.name ?? '—';
+    this.dialogueName.style.color = line.colour ?? '#45f0ff';
+    this.dialogueText.textContent = line.text ?? '';
+    this.dialogue.classList.add('on');
+  }
+
+  get dialogueOpen() {
+    return this.dialogueTimer > 0 || this.dialogueQueue.length > 0;
   }
 
   setSpeed(visible, mph) {
@@ -150,10 +198,17 @@ export class Hud {
   }
 
   setArea(x, z) {
-    const name = AREA_NAMES[districtAt(x, z)] ?? 'VICE BEACH';
+    const name = AREA_NAMES[districtAt(x, z)] ?? AREA_NAMES.beach;
     if (name === this.lastArea) return;
     this.lastArea = name;
     this.areaEl.textContent = name;
+    this.districtEl.textContent = `${CITY_NAME} · ${name}`;
+  }
+
+  setGarage(count, capacity) {
+    if (!this.garageEl) return;
+    this.garageEl.textContent = `GARAGE ${count}/${capacity}`;
+    this.garageEl.classList.toggle('full', count >= capacity);
   }
 
   setHurt(on) {
@@ -171,7 +226,15 @@ export class Hud {
     }
     if (this.dialogueTimer > 0) {
       this.dialogueTimer -= dt;
-      if (this.dialogueTimer <= 0) this.dialogue.classList.remove('on');
+      if (this.dialogueTimer <= 0) {
+        const next = this.dialogueQueue.shift();
+        if (next) {
+          this._showLine(next);
+          this.dialogueTimer = next.hold ?? 4.2;
+        } else {
+          this.dialogue.classList.remove('on');
+        }
+      }
     }
   }
 }
