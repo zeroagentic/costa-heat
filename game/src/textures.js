@@ -913,11 +913,8 @@ export function skyTexture(seed = 11) {
   g.addColorStop(0.455, '#b8794f');
   g.addColorStop(0.475, '#f0641e');
   g.addColorStop(0.492, '#ff7420');
-  // The sun's own band clips to near-white: without a genuinely hot core the sky tops
-  // out around 206 and the whole frame stays midtone-flat.
-  // A wide, genuinely blown-out sun region. The leaderboard frames carry 8-12% of their
-  // pixels above 226 in a broad warm mass around a low sun; a hairline band leaves the
-  // frame sitting in the midtones no matter how the lights are tuned.
+  // A wide, honestly blown-out region around the sun is what puts real highlights in the
+  // frame; a hairline band of it just leaves everything sitting in the midtones.
   g.addColorStop(0.470, '#ffe6b4');
   g.addColorStop(0.482, '#fff3cf');
   g.addColorStop(0.494, '#fffdf2');

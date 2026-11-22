@@ -337,6 +337,7 @@ export class ShotDirector {
 
     this.cameraPose = {
       eye: new THREE.Vector3(300, 34, 268),
+      // Aimed lower, toward the horizon, so the sunset band and the skyline share the frame.
       target: new THREE.Vector3(-215, 20, 10),
     };
     world.rig.setMode('shot');

@@ -19,9 +19,9 @@ export function getCarMaterial() {
     carMaterial = new THREE.MeshStandardMaterial({
       vertexColors: true,
       metalness: 0.55,
-      // Glossier paint: at 0.34 the specular lobe was too tight to cover more than a few
-      // pixels, so the panels read as flat matte. Widening it lets the sunset environment
-      // smear along the bodywork instead of vanishing between samples.
+      // A tight specular lobe only covers a couple of pixels, which is why paint at 0.34
+      // read as flat matte. Broaden the lobe and lean harder on the environment so the
+      // sunset drags a long highlight down the bodywork instead of dying between samples.
       roughness: 0.22,
       envMapIntensity: 1.45,
     });

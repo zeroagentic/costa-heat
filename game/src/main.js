@@ -77,31 +77,35 @@ async function boot() {
   await world0.build(() => {});
   world = world0;
 
-  // Install the environment map onto the scene World actually renders. (World swaps in
-  // its own city scene during build, so installing before build targeted a scene that was
-  // never drawn — the reason metal and glass read flat and the frame had no highlights.)
+  // The environment map has to be fitted to the scene World actually draws, which means
+  // this cannot run any earlier: World builds its own city scene and swaps it in mid-build,
+  // so anything attached before that point is attached to a scene nobody renders. Skip it
+  // and the water stops mirroring the sky, the tower glass goes grey and the car paint
+  // loses the last of its reflections.
   try {
-    const envScene = new THREE.Scene();
-    const envSky = new THREE.Mesh(
+    const probeScene = new THREE.Scene();
+    const dome = new THREE.Mesh(
       new THREE.SphereGeometry(50, 32, 16),
       new THREE.MeshBasicMaterial({ side: THREE.BackSide, map: skyTexture() }),
     );
-    envScene.add(envSky);
-    const sunGlow = new THREE.Mesh(
+    probeScene.add(dome);
+    const solarBlob = new THREE.Mesh(
       new THREE.SphereGeometry(6, 16, 12),
       new THREE.MeshBasicMaterial({ color: 0xfff2cc }),
     );
-    sunGlow.position.set(0.72, 0.13, -0.5).normalize().multiplyScalar(34);
-    envScene.add(sunGlow);
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    world.scene.environment = pmrem.fromScene(envScene, 0.04).texture;
-    pmrem.dispose();
-    envSky.geometry.dispose();
-    envSky.material.dispose();
-    sunGlow.geometry.dispose();
-    sunGlow.material.dispose();
+    solarBlob.position.set(-0.72, 0.13, -0.62).normalize().multiplyScalar(34);
+    probeScene.add(solarBlob);
+    const pmremGen = new THREE.PMREMGenerator(renderer);
+    pmremGen.compileEquirectangularShader();
+    world.scene.environment = pmremGen.fromScene(probeScene, 0.04).texture;
+    pmremGen.dispose();
+    dome.geometry.dispose();
+    dome.material.dispose();
+    solarBlob.geometry.dispose();
+    solarBlob.material.dispose();
   } catch (err) {
+    // Losing the env map costs reflections only, so a warning is enough to boot on.
+    console.warn('environment map unavailable:', err);
   }
   world.input = input;
   renderer.setAnimationLoop?.(null);

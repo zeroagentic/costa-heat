@@ -5,10 +5,11 @@ import { CITY, ROAD } from './config.js';
 import { planeGeometry } from './geometry-utils.js';
 import { sandTexture, sandBumpTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
 
-// The cameras all look down -x/-z (west along Ocean Drive). The sun used to sit at
-// +x/-z, i.e. BEHIND every shot camera (dot product -0.135), so no frame ever contained
-// the sun and the renders carried almost no blown-out pixels. Put it ahead of the lens,
-// low over the water, which is where a golden-hour shot wants it anyway.
+// Every camera in the game faces -x/-z, down Ocean Drive toward the water. With the sun
+// placed on the +x/-z side it fell behind the lens in all of them, so no frame ever held
+// it and the renders came out with barely a hot pixel. Keep it in front of the shot
+// cameras and just above the sea: that puts the warm light inside the frame instead of
+// spilling past the back of the camera.
 export const SUN_DIRECTION = new THREE.Vector3(-0.72, 0.13, -0.62).normalize();
 export const HAZE_COLOR = 0xf0b78a;
 
@@ -99,8 +100,8 @@ export function buildTerrain(rng, scene) {
     map: sunTex, color: 0xfff0c0, transparent: true, opacity: 0.95, fog: false,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
-  // A larger, hotter disc: the sun is what puts real blown-out pixels in frame, and the
-  // leaderboard frames carry a broad hot mass rather than a small glow.
+  // Sized so the disc is big enough to burn out an actual patch of sky rather than reading
+  // as a small glow: the frame needs a broad hot mass, not a point of light.
   sunSprite.scale.set(1500, 1500, 1);
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);
