@@ -113,19 +113,20 @@ export class ShotDirector {
     car.speed = Math.max(car.speed, 25);
     world.wanted.setLevel(2);
 
-    // Cinematic three-quarter camera, anchored to where the car ACTUALLY ended up after
-    // the drive settle (a static pose would be left behind once the car accelerates).
-    // Low and close so the stolen coupe dominates the left of frame, with the avenue,
-    // palms and sunset receding to the right.
-    const cp = car.position;
-    const fwd = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
-    const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
-    const eye = cp.clone()
-      .addScaledVector(fwd, 5.6)      // ahead of the car, so we see its front quarter
-      .addScaledVector(side, 4.6)     // off to one side
-      .setY(1.85);                    // low, near bonnet height
-    const look = cp.clone().addScaledVector(fwd, 0.4).setY(1.05);
-    this.cameraPose = { eye, target: look };
+    // Three-quarter cinematic rig built from the car's ACTUAL final position after the
+    // settle. The pose has to be anchored there rather than fixed in world space: the
+    // car keeps accelerating through the shot, so a static camera would be left behind.
+    // Low and close, so the stolen coupe fills the left of frame while the avenue,
+    // palms and sunset recede to the right.
+    const anchor = car.position;
+    const heading = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
+    const right = new THREE.Vector3(heading.z, 0, -heading.x);
+    const camPos = anchor.clone()
+      .addScaledVector(heading, 5.6)  // forward of the car, giving us its front quarter
+      .addScaledVector(right, 4.6)    // offset across the road
+      .setY(1.85);                    // near bonnet height
+    const aimAt = anchor.clone().addScaledVector(heading, 0.4).setY(1.05);
+    this.cameraPose = { eye: camPos, target: aimAt };
     this.cameraFn = () => {
       world.camera.position.copy(this.cameraPose.eye);
       world.camera.lookAt(this.cameraPose.target.x, this.cameraPose.target.y, this.cameraPose.target.z);
