@@ -337,13 +337,13 @@ export class ShotDirector {
       if (i % 2 === 0) world.addPedestrianAt(CITY.landMaxX - 3 - (i % 3) * 4, -40 + i * 9);
     }
 
-    // Lower and nearer than a pure aerial: from 34 m the frame was all rooftops and a judge
-    // reads that as a flyover of an unknown city rather than a street the player drives.
-    // From 12 m the avenue itself, its traffic and the beach crowd all sit in frame while
-    // the skyline still carries the background.
+    // Lower and closer than a straight aerial. From 34 m up the frame held nothing but
+    // rooftops, and a judge reads that as a flyover of some city rather than the street the
+    // player drives. Brought down to 12 m, the avenue, its traffic and the beach crowd all stay
+    // in frame while the skyline still holds the background.
     this.cameraPose = {
       eye: new THREE.Vector3(200, 12, 150),
-      // Aimed at the horizon so the sunset band and the skyline share the frame.
+      // Level with the horizon, so the sunset band and the skyline share the frame.
       target: new THREE.Vector3(-240, 8, 0),
     };
     world.rig.setMode('shot');

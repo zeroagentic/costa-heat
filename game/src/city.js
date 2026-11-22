@@ -14,9 +14,10 @@ export class City {
     this.colliders = [];
     this.palms = [];
     this.scene = new THREE.Scene();
-    // The fog colour is the scene's whole sense of time of day: an orange fog under a blue dome
-    // still painted every distant surface warm and made a midday render read as dusk. A pale
-    // cool grey lets the sky stay blue and the distance keep its own colour.
+    // Fog colour is what sets the time of day for the whole scene. An orange fog sitting under
+    // a blue dome still painted every distant surface warm, so a daylight render came out
+    // reading as dusk. This pale cool grey lets the dome stay blue and lets distance keep the
+    // colour of whatever is in it.
     this.scene.fog = new THREE.FogExp2(0xd2e0e8, 0.00082);
   }
 

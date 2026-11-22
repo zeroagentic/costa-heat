@@ -110,12 +110,13 @@ export class Hud {
     }
     this.missionPanel.style.display = 'block';
     this.missionTitle.textContent = mission.title;
-    // The eyebrow carries which job of the campaign this is, so a single frame shows the
-    // game has an ordered run of them rather than one disconnected errand.
+    // The eyebrow states where this job sits in the campaign, so one frame is enough to show
+    // there is an ordered run of them and not a single disconnected errand. Both figures are
+    // zero-based/one-based in different ways, hence the +1 and the emptiness guard.
     if (this.missionProgress) {
-      const idx = Number.isFinite(mission.index) ? mission.index + 1 : null;
-      const total = Number.isFinite(mission.total) ? mission.total : null;
-      this.missionProgress.textContent = idx && total ? `${idx}/${total}` : '';
+      const position = Number.isFinite(mission.index) ? mission.index + 1 : null;
+      const outOf = Number.isFinite(mission.total) ? mission.total : null;
+      this.missionProgress.textContent = position && outOf ? `${position}/${outOf}` : '';
     }
     if (this.missionGiver) {
       this.missionGiver.textContent = mission.giver ? `FOR ${mission.giver}` : '';

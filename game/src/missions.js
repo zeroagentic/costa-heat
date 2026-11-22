@@ -543,7 +543,7 @@ export class Missions {
       giverId: def.giver,
       objectives: def.objectives.map((o) => ({ ...o, state: 'pending' })),
       failReason: null,
-      // Where this job sits in the campaign, so the HUD can say "2/5" beside the name.
+      // This job's slot in the campaign ordering, so the HUD can print "2/5" beside the title.
       index: MISSIONS.indexOf(def),
       total: MISSIONS.length,
     };
@@ -731,8 +731,8 @@ export class Missions {
       giverId: def.giver,
       objectives: def.objectives.map((o, i) => ({ ...o, state: i === 0 ? 'active' : 'pending' })),
       failReason: null,
-      // Same campaign position the live path records, so a staged screenshot reads the same
-      // as a played one.
+      // The same campaign position the live start path records, so a staged screenshot shows
+      // the same progress reading as one the player actually played.
       index: this.index,
       total: this.defs.length,
     };
