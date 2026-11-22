@@ -53,7 +53,6 @@ function makeRenderer() {
   // pavement instead of compressing everything into flat midtones.
   renderer.toneMappingExposure = 1.38;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-
   window.addEventListener('resize', () => {
     const w = window.innerWidth, hgt = window.innerHeight;
     renderer.setSize(w, hgt, false);
