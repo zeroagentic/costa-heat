@@ -2,6 +2,7 @@
 // fixed-timestep loop, input wiring, shot mode and save menu. This is the only file that
 // talks to both the DOM and the simulation loop.
 import * as THREE from 'three';
+import { skyTexture } from './textures.js';
 import { City } from './city.js';
 import { World } from './world.js';
 import { Input } from './input.js';
@@ -69,11 +70,39 @@ async function boot() {
 
   const seed = shotMode ? shotMode.seed : 1;
   const scene = new THREE.Scene();
+
   const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.35, 4200);
 
   const world0 = new World({ scene, camera, hud, audio, minimap, seed });
   await world0.build(() => {});
   world = world0;
+
+  // Install the environment map onto the scene World actually renders. (World swaps in
+  // its own city scene during build, so installing before build targeted a scene that was
+  // never drawn — the reason metal and glass read flat and the frame had no highlights.)
+  try {
+    const envScene = new THREE.Scene();
+    const envSky = new THREE.Mesh(
+      new THREE.SphereGeometry(50, 32, 16),
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, map: skyTexture() }),
+    );
+    envScene.add(envSky);
+    const sunGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(6, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfff2cc }),
+    );
+    sunGlow.position.set(0.72, 0.13, -0.5).normalize().multiplyScalar(34);
+    envScene.add(sunGlow);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    world.scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    pmrem.dispose();
+    envSky.geometry.dispose();
+    envSky.material.dispose();
+    sunGlow.geometry.dispose();
+    sunGlow.material.dispose();
+  } catch (err) {
+  }
   world.input = input;
   renderer.setAnimationLoop?.(null);
   wireWorldCallbacks();

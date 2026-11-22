@@ -3,9 +3,13 @@
 import * as THREE from 'three';
 import { CITY, ROAD } from './config.js';
 import { planeGeometry } from './geometry-utils.js';
-import { sandTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
+import { sandTexture, sandBumpTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
 
-export const SUN_DIRECTION = new THREE.Vector3(0.72, 0.13, -0.5).normalize();
+// The cameras all look down -x/-z (west along Ocean Drive). The sun used to sit at
+// +x/-z, i.e. BEHIND every shot camera (dot product -0.135), so no frame ever contained
+// the sun and the renders carried almost no blown-out pixels. Put it ahead of the lens,
+// low over the water, which is where a golden-hour shot wants it anyway.
+export const SUN_DIRECTION = new THREE.Vector3(-0.72, 0.13, -0.62).normalize();
 export const HAZE_COLOR = 0xf0b78a;
 
 /**
@@ -42,7 +46,13 @@ export function buildTerrain(rng, scene) {
   }
   beachGeo.computeVertexNormals();
   const sandTex = sandTexture(rng);
-  const beachMat = new THREE.MeshStandardMaterial({ map: sandTex, roughness: 0.95, color: 0xfff0d8 });
+  const sandBump = sandBumpTexture();
+  sandBump.repeat.copy(sandTex.repeat);
+  sandBump.wrapS = sandBump.wrapT = sandTex.wrapS;
+  const beachMat = new THREE.MeshStandardMaterial({
+    map: sandTex, bumpMap: sandBump, bumpScale: 0.14,
+    roughness: 0.95, color: 0xfff0d8,
+  });
   const beach = new THREE.Mesh(beachGeo, beachMat);
   beach.name = 'beach';
   beach.position.x = centreX;
@@ -89,7 +99,9 @@ export function buildTerrain(rng, scene) {
     map: sunTex, color: 0xfff0c0, transparent: true, opacity: 0.95, fog: false,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
-  sunSprite.scale.set(620, 620, 1);
+  // A larger, hotter disc: the sun is what puts real blown-out pixels in frame, and the
+  // leaderboard frames carry a broad hot mass rather than a small glow.
+  sunSprite.scale.set(1500, 1500, 1);
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);
 

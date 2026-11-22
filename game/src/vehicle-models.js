@@ -17,7 +17,13 @@ let carMaterial = null;
 export function getCarMaterial() {
   if (!carMaterial) {
     carMaterial = new THREE.MeshStandardMaterial({
-      vertexColors: true, metalness: 0.45, roughness: 0.34,
+      vertexColors: true,
+      metalness: 0.55,
+      // Glossier paint: at 0.34 the specular lobe was too tight to cover more than a few
+      // pixels, so the panels read as flat matte. Widening it lets the sunset environment
+      // smear along the bodywork instead of vanishing between samples.
+      roughness: 0.22,
+      envMapIntensity: 1.45,
     });
   }
   return carMaterial;

@@ -135,6 +135,15 @@ export class ShotDirector {
     };
     this.cameraFn();
 
+    // the right-hand kerb was a flat wash: queue traffic and pedestrians along it so the
+    // bottom-right of frame carries detail at the near distance
+    for (let i = 0; i < 5; i++) {
+      world.spawnTrafficAt(laneX + 8.8, laneZ - 12 - i * 14, Math.PI);
+    }
+    for (let i = 0; i < 6; i++) {
+      world.addPedestrianAt(laneX + 11.5 + (i % 2) * 2.4, laneZ - 8 - i * 7.5);
+    }
+
     world.hud.say(castMember('sal').name, castMember('sal').lines.return, 6);
     world.hud.showToast('OCEAN DRIVE  ·  MARISOL');
     return { hud: true, freezeInput: true };
@@ -276,6 +285,16 @@ export class ShotDirector {
     world.spawnTrafficAt(x - 12, z - 24, 0);
     world.spawnTrafficAt(x - 12, z + 16, Math.PI);
     world.spawnTrafficAt(x - 20, z - 46, 0);
+    // fill the right-hand third: the frame was empty there, so push life and parked metal
+    // onto the beach side to give the eye something at every depth plane
+    for (let i = 0; i < 6; i++) {
+      world.addPedestrianAt(x + 9 + (i % 3) * 3.1, z - 10 - i * 5.4);
+    }
+    for (let i = 0; i < 4; i++) {
+      world.spawnTrafficAt(x - 4, z - 34 - i * 17, Math.PI);
+    }
+    world.addPedestrianAt(x + 13, z - 30);
+    world.addPedestrianAt(x + 16, z - 44);
 
     const rig = world.rig;
     rig.setMode('foot');
@@ -318,7 +337,7 @@ export class ShotDirector {
 
     this.cameraPose = {
       eye: new THREE.Vector3(300, 34, 268),
-      target: new THREE.Vector3(-215, 46, 10),
+      target: new THREE.Vector3(-215, 20, 10),
     };
     world.rig.setMode('shot');
     world.player.setVisible(false);

@@ -3,7 +3,7 @@
 // markers — plus the NAMES of every Vista Mar district painted across the map.
 import { GRID, ROAD, CITY, DISTRICT_LABELS, AREA_NAMES, districtAt } from './config.js';
 
-const SIZE = 360;
+const SIZE = 260;       // must match the canvas element in index.html
 const SCALE = 2.55;     // pixels per world metre at the map's edge... (world radius shown)
 
 export class Minimap {
@@ -232,17 +232,17 @@ export class Minimap {
 
     // N compass tick
     ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = 'bold 13px Arial';
+    ctx.font = 'bold 11px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('N', R, 18);
+    ctx.fillText('N', R, 15);
 
     ctx.restore();
 
     // rim
     ctx.beginPath();
     ctx.arc(R, R, R - 1, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(69,240,255,0.35)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(69,240,255,0.28)';
+    ctx.lineWidth = 1;
     ctx.stroke();
   }
 
@@ -264,14 +264,14 @@ export class Minimap {
       const dx = m.x - R, dy = m.y - R;
       const distFromCentre = Math.hypot(dx, dy);
       if (distFromCentre > R + 40) continue;
-      const fade = distFromCentre > R - 46 ? 0.28 : 0.85;
-      ctx.font = 'bold 10px "Arial Narrow", Arial';
+      const fade = distFromCentre > R - 34 ? 0.26 : 0.8;
+      ctx.font = 'bold 8.5px "Arial Narrow", Arial';
       ctx.fillStyle = `rgba(190,240,255,${fade})`;
       ctx.shadowColor = 'rgba(0,0,0,0.9)';
       ctx.shadowBlur = 4;
       const words = d.name.split(' ');
       if (words.length > 1) {
-        words.forEach((w, i) => ctx.fillText(w, m.x, m.y + (i - (words.length - 1) / 2) * 11));
+        words.forEach((w, i) => ctx.fillText(w, m.x, m.y + (i - (words.length - 1) / 2) * 9.5));
       } else {
         ctx.fillText(d.name, m.x, m.y);
       }
@@ -280,8 +280,8 @@ export class Minimap {
       ctx.strokeStyle = `rgba(190,240,255,${fade * 0.5})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(m.x - 8, m.y - 14);
-      ctx.lineTo(m.x + 8, m.y - 14);
+      ctx.moveTo(m.x - 6, m.y - 12);
+      ctx.lineTo(m.x + 6, m.y - 12);
       ctx.stroke();
     }
     ctx.restore();

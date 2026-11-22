@@ -35,6 +35,7 @@ export class Hud {
     this.districtEl = $('district-name');
     this.wantedLabel = $('wanted-label');
     this.garageEl = $('garage-count');
+    this.subRow = this.garageEl?.closest('.row') ?? null;
 
     this.stars = [];
     for (let i = 0; i < 5; i++) {
@@ -200,15 +201,42 @@ export class Hud {
   setArea(x, z) {
     const name = AREA_NAMES[districtAt(x, z)] ?? AREA_NAMES.beach;
     if (name === this.lastArea) return;
+    const first = this.lastArea === '';
     this.lastArea = name;
     this.areaEl.textContent = name;
     this.districtEl.textContent = `${CITY_NAME} · ${name}`;
+    // the district line lives at 0.35 opacity so it stays out of the scene; crossing into a
+    // new district lifts it long enough to read, then it settles back
+    if (!first) this._flash(this.districtEl, 'flash', 2.5);
   }
 
   setGarage(count, capacity) {
     if (!this.garageEl) return;
-    this.garageEl.textContent = `GARAGE ${count}/${capacity}`;
+    const text = `GARAGE ${count}/${capacity}`;
+    // the row is hidden while nothing changes, so only a real change earns a flash; the
+    // first paint at boot is not news
+    const changed = this._lastGarage !== undefined && this._lastGarage !== text;
+    this._lastGarage = text;
+    this.garageEl.textContent = text;
     this.garageEl.classList.toggle('full', count >= capacity);
+    if (changed) this._flash(this.subRow, 'flash', 2.5);
+  }
+
+  /**
+   * Bring a low-opacity HUD element up for `seconds`, then let CSS ease it back down. Used
+   * by the district line and the garage/key-hint row, which have to stay in the DOM and keep
+   * updating but must not hold screen space in the standing HUD. Re-flashing restarts the
+   * clock instead of stacking timers.
+   */
+  _flash(el, cls, seconds) {
+    if (!el) return;
+    el.classList.add(cls);
+    this.flashTimers ??= new Map();
+    clearTimeout(this.flashTimers.get(el));
+    this.flashTimers.set(el, setTimeout(() => {
+      el.classList.remove(cls);
+      this.flashTimers.delete(el);
+    }, seconds * 1000));
   }
 
   setHurt(on) {
