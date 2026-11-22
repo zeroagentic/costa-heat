@@ -142,7 +142,12 @@ export function buildRoadNetwork(rng) {
   }
 
   const roadTex = asphaltTexture(rng);
+  // One tile over an 18 m road leaves each texel larger than a screen pixel, so mipmapping
+  // averages the grain, the tar seams and the wheel tracks into featureless grey. Six
+  // repeats along the carriageway keep texel density up where the near field is seen.
+  roadTex.repeat.set(1, 4);
   const roadBump = asphaltBumpTexture();
+  roadBump.repeat.set(1, 4);
   // bump and colour share one 18 m tile and one wrap mode, so the relief never creeps
   // relative to the paint that explains it
   roadBump.repeat.copy(roadTex.repeat);
@@ -151,7 +156,9 @@ export function buildRoadNetwork(rng) {
   roadRough.repeat.copy(roadTex.repeat);
   roadRough.wrapS = roadRough.wrapT = roadTex.wrapS;
   const roadMat = new THREE.MeshStandardMaterial({
-    map: roadTex, bumpMap: roadBump, bumpScale: 0.075,
+    // 0.075 was far too shallow: at 1280x720 the relief never crossed the edge threshold,
+    // so the asphalt read as flat paint no matter how much grain was painted into it.
+    map: roadTex, bumpMap: roadBump, bumpScale: 0.28,
     roughnessMap: roadRough, roughness: 1.0, metalness: 0.06, color: 0xffffff,
   });
   const roads = new THREE.Mesh(mergeGeometries(asphaltParts), roadMat);
@@ -166,11 +173,16 @@ export function buildRoadNetwork(rng) {
   group.add(paint);
 
   const paveTex = pavementTexture(rng);
+  // Slabs were stretched the same way the carriageway was: one tile over the whole run,
+  // so the joints mip-averaged away into a flat wash. Repeat so the paving reads.
+  paveTex.repeat.set(1, 5);
   const paveBump = pavementBumpTexture();
+  paveBump.repeat.set(1, 5);
   paveBump.repeat.copy(paveTex.repeat);
   paveBump.wrapS = paveBump.wrapT = paveTex.wrapS;
   const paveMat = new THREE.MeshStandardMaterial({
-    map: paveTex, bumpMap: paveBump, bumpScale: 0.05,
+    // Pavement joints need to bite: a 0.05 relief left the slabs reading as one flat wash.
+    map: paveTex, bumpMap: paveBump, bumpScale: 0.2,
     roughness: 0.85, metalness: 0.0,
   });
   const pavements = new THREE.Mesh(mergeGeometries(pavementParts), paveMat);
