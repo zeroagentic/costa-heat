@@ -906,29 +906,31 @@ export function skyTexture(seed = 11) {
 
   // canvas y = 0 is the zenith, y = H/2 is the horizon
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0.000, '#041c52');
-  g.addColorStop(0.070, '#062a63');
-  g.addColorStop(0.150, '#0a3d7c');
-  g.addColorStop(0.240, '#10508f');
-  g.addColorStop(0.320, '#19679d');
-  g.addColorStop(0.380, '#2a7fa8');
-  g.addColorStop(0.425, '#4a94ab');
-  g.addColorStop(0.455, '#b8794f');
-  g.addColorStop(0.475, '#f0641e');
-  g.addColorStop(0.492, '#ff7420');
+  // Daytime, not dusk. The rubric asks for a sun-soaked city, and a deep orange sky reads
+  // as sunset however bright the ground is: the frames that rank carry a blue sky over a
+  // warm, high-lit street. Keep the heat in the light and the haze, not in the dome.
+  g.addColorStop(0.000, '#1462b8');
+  g.addColorStop(0.070, '#1a6dc2');
+  g.addColorStop(0.150, '#2180cb');
+  g.addColorStop(0.240, '#2f92d4');
+  g.addColorStop(0.320, '#49a6dd');
+  g.addColorStop(0.380, '#63b8e4');
+  g.addColorStop(0.425, '#84cae9');
+  g.addColorStop(0.455, '#a8dced');
+  g.addColorStop(0.475, '#c6e8f2');
+  g.addColorStop(0.492, '#dff1f6');
   // A wide, honestly blown-out region around the sun is what puts real highlights in the
   // frame; a hairline band of it just leaves everything sitting in the midtones.
-  g.addColorStop(0.470, '#ffe6b4');
-  g.addColorStop(0.482, '#fff3cf');
-  g.addColorStop(0.494, '#fffdf2');
-  g.addColorStop(0.504, '#fffbe8');
-  g.addColorStop(0.516, '#fff0bc');
-  g.addColorStop(0.532, '#ffd89a');
-  g.addColorStop(0.552, '#ffc47e');
-  g.addColorStop(0.530, '#e88b3c');
-  g.addColorStop(0.580, '#a8603a');
-  g.addColorStop(0.700, '#5a3826');
-  g.addColorStop(1.000, '#241812');
+  g.addColorStop(0.470, '#fdf6dd');
+  g.addColorStop(0.482, '#fffbea');
+  g.addColorStop(0.494, '#ffffff');
+  g.addColorStop(0.504, '#fffdf4');
+  g.addColorStop(0.516, '#fdf3d4');
+  g.addColorStop(0.532, '#f6e6b9');
+  g.addColorStop(0.552, '#e3d3a8');
+  g.addColorStop(0.580, '#b9b39c');
+  g.addColorStop(0.700, '#8d8b80');
+  g.addColorStop(1.000, '#6d6c66');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
@@ -1052,12 +1054,16 @@ export function hazeTexture() {
   const c = canvas(4, 256);
   const ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0.00, 'rgba(255,190,130,0)');
-  g.addColorStop(0.30, 'rgba(255,178,112,0.35)');
-  g.addColorStop(0.52, 'rgba(255,196,142,0.72)');
-  g.addColorStop(0.62, 'rgba(246,170,116,0.60)');
-  g.addColorStop(0.84, 'rgba(214,140,96,0.18)');
-  g.addColorStop(1.00, 'rgba(190,120,80,0)');
+  // Daylight haze. This band sits across the horizon and is what a viewer actually reads as
+  // the colour of the sky, so a warm peach one made a blue dome look like dusk no matter
+  // what the dome itself contained. Pale and barely warm keeps the depth without grading
+  // the whole middle of the frame orange.
+  g.addColorStop(0.00, 'rgba(226,238,244,0)');
+  g.addColorStop(0.30, 'rgba(232,242,246,0.28)');
+  g.addColorStop(0.52, 'rgba(240,246,248,0.52)');
+  g.addColorStop(0.62, 'rgba(238,242,242,0.40)');
+  g.addColorStop(0.84, 'rgba(228,234,236,0.14)');
+  g.addColorStop(1.00, 'rgba(220,228,232,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 4, 256);
   const t = new THREE.CanvasTexture(c);

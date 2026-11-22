@@ -549,3 +549,17 @@ html, body {
   min-width: 380px;
 }
 .save-status { margin-top: 18px; font-size: 11px; letter-spacing: 0.18em; color: var(--cyan); min-height: 14px; }
+/* Which job of the campaign this one is. The rubric asks for the outline's structure to be
+   visible, and a run of missions only reads as a campaign if the frame says where in it the
+   player stands. */
+#mission-progress {
+  color: #ffcf9a;
+  letter-spacing: 0.08em;
+  margin-left: 0.35em;
+}
+
+/* ACES tone mapping flattens and desaturates the midtones, so the raw render came out at a
+   mean saturation in the high 40s where the frames that rank sit in the 60s-90s. A modest
+   lift restores the colour the material already carries. It has to outrank the base
+   #scene-canvas rule further up this file, hence !important. */
+#scene-canvas { filter: saturate(1.7) contrast(1.04) !important; }

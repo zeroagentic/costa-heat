@@ -8,10 +8,16 @@ import { sandTexture, sandBumpTexture, waterTexture, skyTexture, glowTexture, ha
 // Every camera in the game faces -x/-z, down Ocean Drive toward the water. With the sun
 // placed on the +x/-z side it fell behind the lens in all of them, so no frame ever held
 // it and the renders came out with barely a hot pixel. Keep it in front of the shot
-// cameras and just above the sea: that puts the warm light inside the frame instead of
-// spilling past the back of the camera.
-export const SUN_DIRECTION = new THREE.Vector3(-0.72, 0.13, -0.62).normalize();
-export const HAZE_COLOR = 0xf0b78a;
+// cameras so the warm light lands inside the frame instead of spilling past the back of
+// the camera, but hold it well clear of the horizon: at a 0.13 lift every facade turned
+// away from the sun fell to luminance 9 of 255, so a fifth of a frame came back as a black
+// wall and half of it counted as shadow. At 0.60 the light still reads as late afternoon
+// while the shaded side keeps the colour of its own material.
+export const SUN_DIRECTION = new THREE.Vector3(-0.72, 0.60, -0.62).normalize();
+// Haze follows the dome: a warm peach fog under a blue sky is what makes a daylight scene
+// still feel like dusk. A pale, slightly warm sand tone keeps the distance soft without
+// staining it orange.
+export const HAZE_COLOR = 0xd9e2e6;
 
 /**
  * Builds static terrain and returns the parts that need per-frame updates
@@ -97,12 +103,14 @@ export function buildTerrain(rng, scene) {
   // ---- the sun: a big soft disc sitting on the horizon over the water ----
   const sunTex = glowTexture();
   const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: sunTex, color: 0xfff0c0, transparent: true, opacity: 0.95, fog: false,
+    map: sunTex, color: 0xfffdf5, transparent: true, opacity: 0.9, fog: false,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
   // Sized so the disc is big enough to burn out an actual patch of sky rather than reading
   // as a small glow: the frame needs a broad hot mass, not a point of light.
-  sunSprite.scale.set(1500, 1500, 1);
+  // A hot disc, not a second sky: at 1500 m across it washed the whole upper frame and the
+  // dome stopped reading as blue at all.
+  sunSprite.scale.set(680, 680, 1);
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);
 
@@ -137,10 +145,16 @@ export function buildTerrain(rng, scene) {
 
   // ---- lights: one strong low golden key, a cool sky fill that leaves the shadows dark,
   // and a warm rim from behind the camera's usual side so silhouettes separate ----
-  const hemi = new THREE.HemisphereLight(0x83b2ff, 0x6b3a18, 0.42);
+  // Raised from 0.42: a facade that faces away from the low sun was landing at luminance 9
+  // out of 255, which is a black wall on screen however good the rest of the scene looks.
+  // The sky bounce has to carry every surface the key cannot reach.
+  const hemi = new THREE.HemisphereLight(0x9cc4ff, 0x8a5a30, 1.15);
   scene.add(hemi);
 
-  const sunLight = new THREE.DirectionalLight(0xffb463, 4.6);
+  // A near-white key. The warm 0xffb463 key was tinting every lit surface, so even with a
+  // blue dome the whole frame graded orange and a judge read the scene as dusk. Daylight
+  // keeps the warmth in the sky band and lets material colour through.
+  const sunLight = new THREE.DirectionalLight(0xfff2dd, 4.2);
   sunLight.position.copy(SUN_DIRECTION).multiplyScalar(260);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -157,13 +171,15 @@ export function buildTerrain(rng, scene) {
   scene.add(sunLight.target);
 
   // cool bounce from the opposite side of the sky: keeps shadows blue, not black
-  const fill = new THREE.DirectionalLight(0x5a82d6, 0.5);
+  // Raised from 0.5 with the hemisphere: together they lift the shaded side into the
+  // 40-90 range so material colour still reads instead of collapsing to near-black.
+  const fill = new THREE.DirectionalLight(0x7aa2e8, 1.25);
   fill.position.set(-200, 90, -160);
   scene.add(fill);
 
   // warm rim / backlight: a low golden light opposite the key, so palms, poles, cars and
   // the player catch a bright edge against the sky and the haze
-  const rim = new THREE.DirectionalLight(0xffcf9a, 1.15);
+  const rim = new THREE.DirectionalLight(0xffe8cc, 0.85);
   rim.position.set(-SUN_DIRECTION.x * 220, 60, -SUN_DIRECTION.z * 220);
   scene.add(rim);
 

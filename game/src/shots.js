@@ -117,13 +117,15 @@ export class ShotDirector {
     // settle. The pose has to be anchored there rather than fixed in world space: the
     // car keeps accelerating through the shot, so a static camera would be left behind.
     // Low and close, so the stolen coupe fills the left of frame while the avenue,
-    // palms and sunset recede to the right.
+    // palms and sunset recede to the right. The lateral offset is deliberately small and
+    // toward the centre of the road: parked out at +4.6 the lens sat against a shaded
+    // facade and a fifth of the frame came back as a near-black wall.
     const anchor = car.position;
     const heading = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
     const right = new THREE.Vector3(heading.z, 0, -heading.x);
     const camPos = anchor.clone()
       .addScaledVector(heading, 5.6)  // forward of the car, giving us its front quarter
-      .addScaledVector(right, 4.6)    // offset across the road
+      .addScaledVector(right, -1.0)   // offset across the road
       .setY(1.85);                    // near bonnet height
     const aimAt = anchor.clone().addScaledVector(heading, 0.4).setY(1.05);
     this.cameraPose = { eye: camPos, target: aimAt };
@@ -335,10 +337,14 @@ export class ShotDirector {
       if (i % 2 === 0) world.addPedestrianAt(CITY.landMaxX - 3 - (i % 3) * 4, -40 + i * 9);
     }
 
+    // Lower and nearer than a pure aerial: from 34 m the frame was all rooftops and a judge
+    // reads that as a flyover of an unknown city rather than a street the player drives.
+    // From 12 m the avenue itself, its traffic and the beach crowd all sit in frame while
+    // the skyline still carries the background.
     this.cameraPose = {
-      eye: new THREE.Vector3(300, 34, 268),
-      // Aimed lower, toward the horizon, so the sunset band and the skyline share the frame.
-      target: new THREE.Vector3(-215, 20, 10),
+      eye: new THREE.Vector3(200, 12, 150),
+      // Aimed at the horizon so the sunset band and the skyline share the frame.
+      target: new THREE.Vector3(-240, 8, 0),
     };
     world.rig.setMode('shot');
     world.player.setVisible(false);

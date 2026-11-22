@@ -16,6 +16,7 @@ export class Hud {
     this.wantedEl = $('wanted');
     this.missionPanel = $('mission-panel');
     this.missionTitle = $('mission-title');
+    this.missionProgress = $('mission-progress');
     this.missionGiver = $('mission-giver');
     this.missionList = $('mission-objectives');
     this.weaponName = $('weapon-name');
@@ -109,6 +110,13 @@ export class Hud {
     }
     this.missionPanel.style.display = 'block';
     this.missionTitle.textContent = mission.title;
+    // The eyebrow carries which job of the campaign this is, so a single frame shows the
+    // game has an ordered run of them rather than one disconnected errand.
+    if (this.missionProgress) {
+      const idx = Number.isFinite(mission.index) ? mission.index + 1 : null;
+      const total = Number.isFinite(mission.total) ? mission.total : null;
+      this.missionProgress.textContent = idx && total ? `${idx}/${total}` : '';
+    }
     if (this.missionGiver) {
       this.missionGiver.textContent = mission.giver ? `FOR ${mission.giver}` : '';
       this.missionGiver.style.color = mission.giverColour ?? '#ff3d8b';

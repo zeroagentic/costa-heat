@@ -51,7 +51,7 @@ function makeRenderer() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // Lifted so the midday frame gets genuine specular highlights and open sunlit
   // pavement instead of compressing everything into flat midtones.
-  renderer.toneMappingExposure = 1.38;
+  renderer.toneMappingExposure = 1.75;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   window.addEventListener('resize', () => {
     const w = window.innerWidth, hgt = window.innerHeight;

@@ -543,6 +543,9 @@ export class Missions {
       giverId: def.giver,
       objectives: def.objectives.map((o) => ({ ...o, state: 'pending' })),
       failReason: null,
+      // Where this job sits in the campaign, so the HUD can say "2/5" beside the name.
+      index: MISSIONS.indexOf(def),
+      total: MISSIONS.length,
     };
     this.active.objectives[0].state = 'active';
     const ctx = this._ctx(world);
@@ -728,6 +731,10 @@ export class Missions {
       giverId: def.giver,
       objectives: def.objectives.map((o, i) => ({ ...o, state: i === 0 ? 'active' : 'pending' })),
       failReason: null,
+      // Same campaign position the live path records, so a staged screenshot reads the same
+      // as a played one.
+      index: this.index,
+      total: this.defs.length,
     };
     const ctx = this._ctx(world);
     def.setup(ctx);
