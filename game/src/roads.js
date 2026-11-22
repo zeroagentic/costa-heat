@@ -142,9 +142,10 @@ export function buildRoadNetwork(rng) {
   }
 
   const roadTex = asphaltTexture(rng);
-  // One tile over an 18 m road leaves each texel larger than a screen pixel, so mipmapping
-  // averages the grain, the tar seams and the wheel tracks into featureless grey. Six
-  // repeats along the carriageway keep texel density up where the near field is seen.
+  // A single tile covering the whole run stretches every texel past one screen pixel, and the
+  // mip chain then blends the grain, the tar seams and the wheel tracks down to flat grey.
+  // Tiling it up the carriageway instead holds texel density together close to the camera,
+  // which is where the road surface is actually examined.
   roadTex.repeat.set(1, 4);
   const roadBump = asphaltBumpTexture();
   roadBump.repeat.set(1, 4);
@@ -156,8 +157,8 @@ export function buildRoadNetwork(rng) {
   roadRough.repeat.copy(roadTex.repeat);
   roadRough.wrapS = roadRough.wrapT = roadTex.wrapS;
   const roadMat = new THREE.MeshStandardMaterial({
-    // 0.075 was far too shallow: at 1280x720 the relief never crossed the edge threshold,
-    // so the asphalt read as flat paint no matter how much grain was painted into it.
+    // Depth has to clear the edge threshold at 1280x720: shallower than this the relief never
+    // did, so no amount of painted grain could stop the asphalt reading as flat paint.
     map: roadTex, bumpMap: roadBump, bumpScale: 0.28,
     roughnessMap: roadRough, roughness: 1.0, metalness: 0.06, color: 0xffffff,
   });
@@ -173,15 +174,17 @@ export function buildRoadNetwork(rng) {
   group.add(paint);
 
   const paveTex = pavementTexture(rng);
-  // Slabs were stretched the same way the carriageway was: one tile over the whole run,
-  // so the joints mip-averaged away into a flat wash. Repeat so the paving reads.
+  // The same stretched-tile problem the asphalt had: one tile across the full walk, and the
+  // paving joints were gone by the time the mip chain finished with them. Repeat the tile so
+  // the slabs keep enough texels per pixel to show joints and grain.
   paveTex.repeat.set(1, 5);
   const paveBump = pavementBumpTexture();
   paveBump.repeat.set(1, 5);
   paveBump.repeat.copy(paveTex.repeat);
   paveBump.wrapS = paveBump.wrapT = paveTex.wrapS;
   const paveMat = new THREE.MeshStandardMaterial({
-    // Pavement joints need to bite: a 0.05 relief left the slabs reading as one flat wash.
+    // Same story as the carriageway: at 1280x720 the old depth sat under the edge threshold,
+    // and the slabs flattened into paint regardless of the joints drawn into the map.
     map: paveTex, bumpMap: paveBump, bumpScale: 0.2,
     roughness: 0.85, metalness: 0.0,
   });

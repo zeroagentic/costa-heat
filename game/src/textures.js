@@ -470,9 +470,9 @@ function heightField(W, H, paint) {
   ctx.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  // Relief is the micro-detail that survives to the far end of a road, so it needs MORE
-  // grazing-angle filtering than the colour map, not less: at 4 the bump blurred into a
-  // flat wash exactly where the frame needs texture most.
+  // Relief carries the micro-detail all the way out to the far end of a run, so it wants a
+  // heavier grazing-angle filter than the colour map rather than a lighter one; filtered down
+  // from here, the bump dissolves to a flat wash precisely where the frame is emptiest.
   t.anisotropy = 16;
   t.needsUpdate = true;
   return t;
