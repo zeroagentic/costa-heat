@@ -2,7 +2,6 @@
 // fixed-timestep loop, input wiring, shot mode and save menu. This is the only file that
 // talks to both the DOM and the simulation loop.
 import * as THREE from 'three';
-import { skyTexture } from './textures.js';
 import { City } from './city.js';
 import { World } from './world.js';
 import { Input } from './input.js';
@@ -49,9 +48,9 @@ function makeRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  // The midday frame needs open sunlit pavement and real specular hits, not the whole tonal
-  // range compressed into flat midtones, so the exposure is pushed up to 1.75.
-  renderer.toneMappingExposure = 1.75;
+  // Lifted so the midday frame gets genuine specular highlights and open sunlit
+  // pavement instead of compressing everything into flat midtones.
+  renderer.toneMappingExposure = 1.38;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   window.addEventListener('resize', () => {
     const w = window.innerWidth, hgt = window.innerHeight;
@@ -70,43 +69,11 @@ async function boot() {
 
   const seed = shotMode ? shotMode.seed : 1;
   const scene = new THREE.Scene();
-
   const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.35, 4200);
 
   const world0 = new World({ scene, camera, hud, audio, minimap, seed });
   await world0.build(() => {});
   world = world0;
-
-  // The environment map has to be fitted to the scene World actually draws, which means
-  // this cannot run any earlier: World builds its own city scene and swaps it in mid-build,
-  // so anything attached before that point is attached to a scene nobody renders. Skip it
-  // and the water stops mirroring the sky, the tower glass goes grey and the car paint
-  // loses the last of its reflections.
-  try {
-    const probeScene = new THREE.Scene();
-    const dome = new THREE.Mesh(
-      new THREE.SphereGeometry(50, 32, 16),
-      new THREE.MeshBasicMaterial({ side: THREE.BackSide, map: skyTexture() }),
-    );
-    probeScene.add(dome);
-    const solarBlob = new THREE.Mesh(
-      new THREE.SphereGeometry(6, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0xfff2cc }),
-    );
-    solarBlob.position.set(-0.72, 0.13, -0.62).normalize().multiplyScalar(34);
-    probeScene.add(solarBlob);
-    const pmremGen = new THREE.PMREMGenerator(renderer);
-    pmremGen.compileEquirectangularShader();
-    world.scene.environment = pmremGen.fromScene(probeScene, 0.04).texture;
-    pmremGen.dispose();
-    dome.geometry.dispose();
-    dome.material.dispose();
-    solarBlob.geometry.dispose();
-    solarBlob.material.dispose();
-  } catch (err) {
-    // Losing the env map costs reflections only, so a warning is enough to boot on.
-    console.warn('environment map unavailable:', err);
-  }
   world.input = input;
   renderer.setAnimationLoop?.(null);
   wireWorldCallbacks();

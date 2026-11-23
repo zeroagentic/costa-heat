@@ -117,15 +117,13 @@ export class ShotDirector {
     // settle. The pose has to be anchored there rather than fixed in world space: the
     // car keeps accelerating through the shot, so a static camera would be left behind.
     // Low and close, so the stolen coupe fills the left of frame while the avenue,
-    // palms and sunset recede to the right. The lateral offset is deliberately small and
-    // toward the centre of the road: parked out at +4.6 the lens sat against a shaded
-    // facade and a fifth of the frame came back as a near-black wall.
+    // palms and sunset recede to the right.
     const anchor = car.position;
     const heading = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
     const right = new THREE.Vector3(heading.z, 0, -heading.x);
     const camPos = anchor.clone()
       .addScaledVector(heading, 5.6)  // forward of the car, giving us its front quarter
-      .addScaledVector(right, -1.0)   // offset across the road
+      .addScaledVector(right, 4.6)    // offset across the road
       .setY(1.85);                    // near bonnet height
     const aimAt = anchor.clone().addScaledVector(heading, 0.4).setY(1.05);
     this.cameraPose = { eye: camPos, target: aimAt };
@@ -136,15 +134,6 @@ export class ShotDirector {
       world.camera.updateProjectionMatrix();
     };
     this.cameraFn();
-
-    // the right-hand kerb was a flat wash: queue traffic and pedestrians along it so the
-    // bottom-right of frame carries detail at the near distance
-    for (let i = 0; i < 5; i++) {
-      world.spawnTrafficAt(laneX + 8.8, laneZ - 12 - i * 14, Math.PI);
-    }
-    for (let i = 0; i < 6; i++) {
-      world.addPedestrianAt(laneX + 11.5 + (i % 2) * 2.4, laneZ - 8 - i * 7.5);
-    }
 
     world.hud.say(castMember('sal').name, castMember('sal').lines.return, 6);
     world.hud.showToast('OCEAN DRIVE  ·  MARISOL');
@@ -287,16 +276,6 @@ export class ShotDirector {
     world.spawnTrafficAt(x - 12, z - 24, 0);
     world.spawnTrafficAt(x - 12, z + 16, Math.PI);
     world.spawnTrafficAt(x - 20, z - 46, 0);
-    // fill the right-hand third: the frame was empty there, so push life and parked metal
-    // onto the beach side to give the eye something at every depth plane
-    for (let i = 0; i < 6; i++) {
-      world.addPedestrianAt(x + 9 + (i % 3) * 3.1, z - 10 - i * 5.4);
-    }
-    for (let i = 0; i < 4; i++) {
-      world.spawnTrafficAt(x - 4, z - 34 - i * 17, Math.PI);
-    }
-    world.addPedestrianAt(x + 13, z - 30);
-    world.addPedestrianAt(x + 16, z - 44);
 
     const rig = world.rig;
     rig.setMode('foot');
@@ -337,14 +316,9 @@ export class ShotDirector {
       if (i % 2 === 0) world.addPedestrianAt(CITY.landMaxX - 3 - (i % 3) * 4, -40 + i * 9);
     }
 
-    // Not a high aerial. Framed from above, the picture is all rooftops and reads as a flyover
-    // of an unknown city rather than a street the player drives. From this height — 12 m — the
-    // avenue, its traffic and the beach crowd all sit in frame, while the skyline still holds
-    // the background.
     this.cameraPose = {
-      eye: new THREE.Vector3(200, 12, 150),
-      // Level with the horizon, so the sun band and the skyline share the frame.
-      target: new THREE.Vector3(-240, 8, 0),
+      eye: new THREE.Vector3(300, 34, 268),
+      target: new THREE.Vector3(-215, 46, 10),
     };
     world.rig.setMode('shot');
     world.player.setVisible(false);

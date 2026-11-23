@@ -14,10 +14,7 @@ export class City {
     this.colliders = [];
     this.palms = [];
     this.scene = new THREE.Scene();
-    // The fog colour is the scene's sense of time of day. A warm orange one painted every
-    // distant surface warm, so a daylight render came out reading as dusk; this pale cool grey
-    // lets the dome stay blue and lets distance keep the colour of whatever is in it.
-    this.scene.fog = new THREE.FogExp2(0xd2e0e8, 0.00082);
+    this.scene.fog = new THREE.FogExp2(0xe8a878, 0.00092);
   }
 
   async build(progress = () => {}) {

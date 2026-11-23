@@ -3,10 +3,7 @@
 import * as THREE from 'three';
 import { GRID, ROAD, CITY, isRoadAt, groundHeightAt } from './config.js';
 import { mergeGeometries, quadGeometry, boxGeometry } from './geometry-utils.js';
-import {
-  asphaltTexture, asphaltBumpTexture, asphaltRoughnessTexture,
-  pavementTexture, pavementBumpTexture, crosswalkTexture,
-} from './textures.js';
+import { asphaltTexture, pavementTexture, crosswalkTexture } from './textures.js';
 
 export const LANE = 4.4;              // lane centre offset from the road centre line
 export const ROAD_TOP = 0.02;         // asphalt sits just above the terrain plane
@@ -37,24 +34,14 @@ export function buildRoadNetwork(rng) {
   const pavementParts = [];
   const crossParts = [];
 
-  const pushAsphaltStrip = (x0, z0, x1, z1, along) => {
+  const pushAsphaltStrip = (x0, z0, x1, z1) => {
     const w = x1 - x0, d = z1 - z0;
     const g = new THREE.PlaneGeometry(w, d, 1, 1);
     g.rotateX(-Math.PI / 2);
     g.translate(x0 + w / 2, ROAD_TOP, z0 + d / 2);
-    // World-space UVs, normalised so U always spans the 18 m carriageway and V always runs
-    // along it, whichever way the road points. The asphalt texture paints its wheel tracks
-    // at fixed U and its cracks along V, so this keeps the wear under the lane centres on
-    // both the east-west and north-south roads. U divides by the road width and V by 9 m:
-    // the tile is 256x512 texels, so that works out to square 14 px/m texels both ways.
+    // world-space UVs so the asphalt texture keeps a constant scale
     const uv = g.getAttribute('uv');
-    for (let i = 0; i < uv.count; i++) {
-      const u = uv.getX(i), v = uv.getY(i);
-      // After rotateX(-90deg) the plane's local +y runs toward -z, so the distance of a
-      // vertex from the strip's x0/z0 corners is (u*w, (1-v)*d).
-      if (along === 'x') uv.setXY(i, ((1 - v) * d) / 18, (u * w) / 9);
-      else uv.setXY(i, (u * w) / 18, ((1 - v) * d) / 9);
-    }
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (x0 + uv.getX(i) * w) / 18, (z0 + uv.getY(i) * d) / 18);
     asphaltParts.push(g);
   };
 
@@ -62,11 +49,11 @@ export function buildRoadNetwork(rng) {
   const xStart = XS[0] - ROAD.halfWidth;
   const xEnd = CITY.landMaxX + 0.5;
   for (const z of ZS) {
-    pushAsphaltStrip(xStart, z - ROAD.halfWidth, xEnd, z + ROAD.halfWidth, 'x');
+    pushAsphaltStrip(xStart, z - ROAD.halfWidth, xEnd, z + ROAD.halfWidth);
   }
   // vertical roads (run north-south)
   for (const x of XS) {
-    pushAsphaltStrip(x - ROAD.halfWidth, ZS[0] - ROAD.halfWidth, x + ROAD.halfWidth, ZS[ZS.length - 1] + ROAD.halfWidth, 'z');
+    pushAsphaltStrip(x - ROAD.halfWidth, ZS[0] - ROAD.halfWidth, x + ROAD.halfWidth, ZS[ZS.length - 1] + ROAD.halfWidth);
   }
 
   // ---- lane markings (dashed white) on every road, stopping short of junctions ----
@@ -142,26 +129,7 @@ export function buildRoadNetwork(rng) {
   }
 
   const roadTex = asphaltTexture(rng);
-  // A single tile covering the whole run stretches every texel past one screen pixel, and the
-  // mip chain then blends the grain, the tar seams and the wheel tracks down to flat grey.
-  // Tiling it up the carriageway instead holds texel density together close to the camera,
-  // which is where the road surface is actually examined.
-  roadTex.repeat.set(1, 4);
-  const roadBump = asphaltBumpTexture();
-  roadBump.repeat.set(1, 4);
-  // bump and colour share one 18 m tile and one wrap mode, so the relief never creeps
-  // relative to the paint that explains it
-  roadBump.repeat.copy(roadTex.repeat);
-  roadBump.wrapS = roadBump.wrapT = roadTex.wrapS;
-  const roadRough = asphaltRoughnessTexture();
-  roadRough.repeat.copy(roadTex.repeat);
-  roadRough.wrapS = roadRough.wrapT = roadTex.wrapS;
-  const roadMat = new THREE.MeshStandardMaterial({
-    // Depth has to clear the edge threshold at 1280x720: shallower than this the relief never
-    // did, so no amount of painted grain could stop the asphalt reading as flat paint.
-    map: roadTex, bumpMap: roadBump, bumpScale: 0.28,
-    roughnessMap: roadRough, roughness: 1.0, metalness: 0.06, color: 0xffffff,
-  });
+  const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.94, metalness: 0.0, color: 0xffffff });
   const roads = new THREE.Mesh(mergeGeometries(asphaltParts), roadMat);
   roads.receiveShadow = true;
   roads.name = 'asphalt';
@@ -174,20 +142,7 @@ export function buildRoadNetwork(rng) {
   group.add(paint);
 
   const paveTex = pavementTexture(rng);
-  // The same stretched-tile problem the asphalt had: one tile across the full walk, and the
-  // paving joints were gone by the time the mip chain finished with them. Repeat the tile so
-  // the slabs keep enough texels per pixel to show joints and grain.
-  paveTex.repeat.set(1, 5);
-  const paveBump = pavementBumpTexture();
-  paveBump.repeat.set(1, 5);
-  paveBump.repeat.copy(paveTex.repeat);
-  paveBump.wrapS = paveBump.wrapT = paveTex.wrapS;
-  const paveMat = new THREE.MeshStandardMaterial({
-    // Same story as the carriageway: at 1280x720 the old depth sat under the edge threshold,
-    // and the slabs flattened into paint regardless of the joints drawn into the map.
-    map: paveTex, bumpMap: paveBump, bumpScale: 0.2,
-    roughness: 0.85, metalness: 0.0,
-  });
+  const paveMat = new THREE.MeshStandardMaterial({ map: paveTex, roughness: 0.88, metalness: 0.0 });
   const pavements = new THREE.Mesh(mergeGeometries(pavementParts), paveMat);
   pavements.name = 'pavement';
   pavements.receiveShadow = true;
