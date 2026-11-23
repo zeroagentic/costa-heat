@@ -380,7 +380,12 @@ export function skyTexture(seed = 11) {
   const c = canvas(W, H);
   const ctx = c.getContext('2d');
 
-  // canvas y = 0 is the zenith, y = H/2 is the horizon
+  // canvas y = 0 is the zenith, y = H/2 is the horizon.
+  // Deep blue overhead, through cyan, down into a hot core at the horizon. The stops are
+  // written as vertical bands instead of a smooth two-colour blend: a sunset only reads if
+  // the hot part stays a narrow strip at the horizon while everything above it stays deep.
+  // Blending zenith straight into horizon spreads the warmth up the whole dome and the
+  // result turns muddy brown-grey.
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0.000, '#041c52');
   g.addColorStop(0.070, '#062a63');

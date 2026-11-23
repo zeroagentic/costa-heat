@@ -5,7 +5,15 @@ import { CITY, ROAD } from './config.js';
 import { planeGeometry } from './geometry-utils.js';
 import { sandTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
 
+// The sun sits low over the water and a little off the camera's right shoulder. The low
+// height (y = 0.13) is the point: the light comes in almost horizontally and rakes across
+// the facades rather than landing on them flat, so each wall gets a lit side and a dark one
+// and the street fills with long shadows and warm rim light. A sun up at midday height
+// would hit every surface square on and flatten the whole frame into one even tone.
 export const SUN_DIRECTION = new THREE.Vector3(0.72, 0.13, -0.5).normalize();
+// The haze is a deliberately warm peach, because it shares the frame with a sunset dome and
+// has to agree with it. Anything cooler drifting under a warm sky immediately reads as
+// smog hanging over the beach instead of light in the air.
 export const HAZE_COLOR = 0xf0b78a;
 
 /**
@@ -89,6 +97,8 @@ export function buildTerrain(rng, scene) {
     map: sunTex, color: 0xfff0c0, transparent: true, opacity: 0.95, fog: false,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
+  // Kept to a modest disc: big enough to carry weight on the horizon, small enough that it
+  // stays a readable disc instead of blooming out and washing over the top of the frame.
   sunSprite.scale.set(620, 620, 1);
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);

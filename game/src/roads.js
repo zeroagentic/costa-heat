@@ -39,7 +39,10 @@ export function buildRoadNetwork(rng) {
     const g = new THREE.PlaneGeometry(w, d, 1, 1);
     g.rotateX(-Math.PI / 2);
     g.translate(x0 + w / 2, ROAD_TOP, z0 + d / 2);
-    // world-space UVs so the asphalt texture keeps a constant scale
+    // World-space UVs so the asphalt texture keeps a constant scale: dividing by 18 makes
+    // one texture tile cover 18 m of road in both directions, whatever the strip's width or
+    // length. That is what stops a wide avenue stretching the aggregate and a narrow side
+    // street cramming it, so every road looks made of the same surface.
     const uv = g.getAttribute('uv');
     for (let i = 0; i < uv.count; i++) uv.setXY(i, (x0 + uv.getX(i) * w) / 18, (z0 + uv.getY(i) * d) / 18);
     asphaltParts.push(g);
@@ -57,6 +60,9 @@ export function buildRoadNetwork(rng) {
   }
 
   // ---- lane markings (dashed white) on every road, stopping short of junctions ----
+  // Dash and gap are in metres along the road: 3.2 m of paint then 4.2 m of asphalt gives a
+  // rhythm that still reads as broken lines from the chase camera at speed. markY lifts the
+  // paint a hair over the asphalt so it never z-fights with the surface under it.
   const dashLen = 3.2, gap = 4.2, markY = ROAD_TOP + 0.012;
   const markGeom = (x, z, w, d) => {
     const g = new THREE.PlaneGeometry(w, d);
@@ -98,6 +104,8 @@ export function buildRoadNetwork(rng) {
       pg.rotateX(-Math.PI / 2);
       pg.translate(cx, K, cz);
       const uv = pg.getAttribute('uv');
+      // paving slabs tile every 4 m, tighter than the asphalt's 18 m: a pavement is read at
+      // walking distance, so the joints have to be dense enough to show scale underfoot.
       for (let k = 0; k < uv.count; k++) uv.setXY(k, (bx0 + uv.getX(k) * w) / 4, (bz0 + uv.getY(k) * d) / 4);
       pavementParts.push(pg);
       // kerb ring
@@ -118,6 +126,8 @@ export function buildRoadNetwork(rng) {
         if (side === 'w' || side === 'e') cg.rotateY(0);
         cg.translate(px, cwY, pz);
         const cuv = cg.getAttribute('uv');
+        // 1.2 m per stripe tile, with u and v swapped on the east/west approaches so the
+        // bars always run across the direction of travel rather than along it.
         for (let k = 0; k < cuv.count; k++) {
           const rotate = side === 'w' || side === 'e';
           const u = cuv.getX(k), v = cuv.getY(k);
@@ -129,6 +139,8 @@ export function buildRoadNetwork(rng) {
   }
 
   const roadTex = asphaltTexture(rng);
+  // Fully rough and non-metallic: asphalt is a matte dielectric, so it has no specular
+  // mirror of the sky to give itself away. All of its warmth comes from the sun and fog.
   const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.94, metalness: 0.0, color: 0xffffff });
   const roads = new THREE.Mesh(mergeGeometries(asphaltParts), roadMat);
   roads.receiveShadow = true;

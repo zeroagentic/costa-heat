@@ -13,6 +13,12 @@ const glassMat = new THREE.MeshStandardMaterial({
 });
 
 /** One shared vertex-coloured material for every car body and trim. */
+// The paint is the one place where metalness and roughness are deliberately balanced rather
+// than pushed to an extreme. 0.45 metalness means the panels pick up the environment enough
+// to read as painted metal, and 0.34 roughness keeps the highlight tight and glossy but not
+// mirror-sharp. Together they give a warm broad specular along the flanks — exactly the band
+// the low sun rakes down — instead of the dull plastic of zero metalness or the chrome glare
+// of full metalness.
 let carMaterial = null;
 export function getCarMaterial() {
   if (!carMaterial) {

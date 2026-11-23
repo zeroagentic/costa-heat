@@ -316,6 +316,9 @@ export class ShotDirector {
       if (i % 2 === 0) world.addPedestrianAt(CITY.landMaxX - 3 - (i % 3) * 4, -40 + i * 9);
     }
 
+    // Deliberately high and tilted down onto the sunset band, rather than placed at street
+    // level. From here one frame holds the towers, the beach and the water at once, which
+    // is what makes the city read as a place with a coastline instead of a flat skyline.
     this.cameraPose = {
       eye: new THREE.Vector3(300, 34, 268),
       target: new THREE.Vector3(-215, 46, 10),

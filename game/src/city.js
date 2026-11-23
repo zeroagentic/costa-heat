@@ -14,6 +14,10 @@ export class City {
     this.colliders = [];
     this.palms = [];
     this.scene = new THREE.Scene();
+    // The fog colour is what sells the time of day — it is the air of the whole scene, so it
+    // is matched to the sunset haze rather than pulled toward a neutral grey. The density is
+    // deliberately light: far enough out the towers soften but still read, and near-to-far
+    // still carries real depth.
     this.scene.fog = new THREE.FogExp2(0xe8a878, 0.00092);
   }
 

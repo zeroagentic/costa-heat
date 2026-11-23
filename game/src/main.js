@@ -48,8 +48,9 @@ function makeRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  // Lifted so the midday frame gets genuine specular highlights and open sunlit
-  // pavement instead of compressing everything into flat midtones.
+  // Exposure is held back on purpose. ACES is already stretching the highlights in this
+  // scene, so this is about as much range as the sky and the wet sand can take: going any
+  // higher blew the sunset out into what looked like flat midday light.
   renderer.toneMappingExposure = 1.38;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   window.addEventListener('resize', () => {
