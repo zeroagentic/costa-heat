@@ -5,15 +5,22 @@ import { CITY, ROAD } from './config.js';
 import { planeGeometry } from './geometry-utils.js';
 import { sandTexture, waterTexture, skyTexture, glowTexture, hazeTexture } from './textures.js';
 
-// The sun sits low over the water and a little off the camera's right shoulder. The low
-// height (y = 0.13) is the point: the light comes in almost horizontally and rakes across
-// the facades rather than landing on them flat, so each wall gets a lit side and a dark one
-// and the street fills with long shadows and warm rim light. A sun up at midday height
-// would hit every surface square on and flatten the whole frame into one even tone.
+// Direction the key light comes from. The elevation matters more than the compass bearing:
+// the small vertical component keeps the sun near the horizon, so its rays arrive almost
+// parallel to the ground and graze the buildings instead of hitting them face-on. A grazing
+// angle gives every wall a bright side and a shadowed side, throws long shadows down the
+// street and picks out a warm edge on anything standing against the sky — that modelling is
+// where the sense of depth comes from. Lift the sun overhead and all four walls of a block
+// receive nearly the same light, the shadows shrink to the footprint, and the frame
+// collapses into a single even tone. The sideways component keeps it off the avenue's axis
+// too, so the two kerbs are lit unequally rather than like a mirror.
 export const SUN_DIRECTION = new THREE.Vector3(0.72, 0.13, -0.5).normalize();
-// The haze is a deliberately warm peach, because it shares the frame with a sunset dome and
-// has to agree with it. Anything cooler drifting under a warm sky immediately reads as
-// smog hanging over the beach instead of light in the air.
+// Tint of the airborne light that sits between the city and the dome. This colour is not
+// free to choose: it is on screen at the same time as the sky gradient, and the eye reads
+// the two as one body of air. Matching the haze to the warm end of the dome is what makes
+// it look like depth — sunlight scattered over a few kilometres of coast. A haze that is
+// cooler than the sky behind it stops describing distance and starts describing a separate
+// grey layer loitering in front of the beach, which the eye reports as dirty air.
 export const HAZE_COLOR = 0xf0b78a;
 
 /**
@@ -79,9 +86,10 @@ export function buildTerrain(rng, scene) {
   group.add(foam);
 
   // ---- sky dome with a vertical sunset gradient ----
-  // toneMapped:false — ACES lifts and desaturates the mid-blues into grey, which is exactly
-  // what made the old sky read washed out. The gradient is authored in display space, so it
-  // is shown as painted.
+  // This material opts out of tone mapping. ACES is tuned for a scene whose bright end is
+  // already hot, and pushing a saturated mid-blue through it pulls the colour toward grey
+  // while lifting it — the sky would arrive on screen desaturated and milky. The gradient is
+  // painted in final display colours, so it is shown exactly as authored.
   const skyTex = skyTexture();
   const skyMat = new THREE.MeshBasicMaterial({
     map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: false,
@@ -97,8 +105,12 @@ export function buildTerrain(rng, scene) {
     map: sunTex, color: 0xfff0c0, transparent: true, opacity: 0.95, fog: false,
     blending: THREE.AdditiveBlending, depthWrite: false,
   }));
-  // Kept to a modest disc: big enough to carry weight on the horizon, small enough that it
-  // stays a readable disc instead of blooming out and washing over the top of the frame.
+  // The disc is deliberately kept small against the far distance it sits at. Its edge is a
+  // soft falloff, not a hard circle, so its apparent size decides whether it still reads as
+  // a sun at all: widen it and the outer glow climbs into the orange band of the dome behind
+  // it, the two gradients merge, and the eye loses the boundary that says "disc". Held at
+  // this size the core stays compact and luminous, the bloom stays a halo around it, and the
+  // horizon keeps a defined hot spot rather than a general smear of light.
   sunSprite.scale.set(620, 620, 1);
   sunSprite.position.copy(SUN_DIRECTION).multiplyScalar(2600);
   group.add(sunSprite);

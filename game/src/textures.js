@@ -369,11 +369,13 @@ export function glowTexture() {
 }
 
 /**
- * Golden-hour sky for the dome: a saturated deep-blue zenith falling through cyan into a
- * hot peach band that sits ON the horizon line (canvas v = 0.5), with layered cloud
- * streets above it. Clouds are drawn here rather than as geometry so the dome costs one
- * texture and no extra draw calls. Blobs are stamped three times (x-W, x, x+W) so the
- * wrap seam is invisible.
+ * Golden-hour sky for the dome. The whole vertical fall is painted as a ladder of discrete
+ * colour bands rather than a single gradient stretched from top to bottom: a deep blue cap
+ * overhead, a run of blues and cyans down the upper half, then a short and very steep climb
+ * through orange into a hot peach that sits exactly on the horizon (canvas v = 0.5), then a
+ * dark warm ground below it. Cloud streets are stamped into the same canvas, three copies
+ * offset by one width each so the wrap seam never shows, which keeps the whole dome at one
+ * texture and zero extra draw calls.
  */
 export function skyTexture(seed = 11) {
   const W = 1024, H = 512;
@@ -381,11 +383,15 @@ export function skyTexture(seed = 11) {
   const ctx = c.getContext('2d');
 
   // canvas y = 0 is the zenith, y = H/2 is the horizon.
-  // Deep blue overhead, through cyan, down into a hot core at the horizon. The stops are
-  // written as vertical bands instead of a smooth two-colour blend: a sunset only reads if
-  // the hot part stays a narrow strip at the horizon while everything above it stays deep.
-  // Blending zenith straight into horizon spreads the warmth up the whole dome and the
-  // result turns muddy brown-grey.
+  // The stops below are placed like rungs, not like a blend: each pair of neighbours is a
+  // short, deliberate step, and the gap between them stays wide across the top of the dome
+  // and closes up hard in the last few centimetres before the horizon. That uneven spacing
+  // is the whole trick. A single two-colour blend from zenith to horizon spends its whole
+  // length averaging the two, so the warm end in the source gets smeared up the dome and the
+  // cool end dragged down, and the boundary where sky meets sea turns into a muddy brown-grey
+  // wash with no line to it. Keeping the warm bands compressed into a narrow strip leaves the
+  // blues overhead deep and unbroken, so at the horizon there is a crisp change of value the
+  // eye can actually find — a sunset reads by that contrast, not by the amount of orange.
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0.000, '#041c52');
   g.addColorStop(0.070, '#062a63');

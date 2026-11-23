@@ -13,17 +13,23 @@ const glassMat = new THREE.MeshStandardMaterial({
 });
 
 /** One shared vertex-coloured material for every car body and trim. */
-// The paint is the one place where metalness and roughness are deliberately balanced rather
-// than pushed to an extreme. 0.45 metalness means the panels pick up the environment enough
-// to read as painted metal, and 0.34 roughness keeps the highlight tight and glossy but not
-// mirror-sharp. Together they give a warm broad specular along the flanks — exactly the band
-// the low sun rakes down — instead of the dull plastic of zero metalness or the chrome glare
-// of full metalness.
+// Paint is where metalness and roughness have to be balanced against each other rather than
+// driven to an extreme. Metalness sets how much of the surface behaves like bare metal: at
+// zero the body answers only to diffuse light and looks like moulded plastic, with a dull
+// flat flank that ignores the sky. At one it becomes a conductor that mirrors its
+// surroundings and reads as chrome. Halfway between, the panels take a coloured metallic
+// response and pick up the environment enough to look like paint over steel. Roughness then
+// sets how tight that reflection is: high values smear the highlight into a soft sheen, very
+// low values collapse it to a mirror point. Set low-but-not-lowest, the specular stays a
+// broad band that travels along the flank as the car turns — which is precisely the surface
+// the low sun rakes across, so the body catches a moving warm streak instead of a hard dot.
 let carMaterial = null;
 export function getCarMaterial() {
   if (!carMaterial) {
     carMaterial = new THREE.MeshStandardMaterial({
-      vertexColors: true, metalness: 0.45, roughness: 0.34,
+      vertexColors: true,      // one material serves every body colour; the tint lives in the geometry
+      metalness: 0.45,         // enough metallic response to read as painted metal, not grey plastic
+      roughness: 0.34,         // glossy paint: a tight highlight, short of the mirror sharpness of chrome
     });
   }
   return carMaterial;

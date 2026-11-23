@@ -48,9 +48,13 @@ function makeRenderer() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  // Exposure is held back on purpose. ACES is already stretching the highlights in this
-  // scene, so this is about as much range as the sky and the wet sand can take: going any
-  // higher blew the sunset out into what looked like flat midday light.
+  // The exposure is a ceiling, not a boost. ACES is already compressing and lifting the top
+  // end of this scene, and the top end is enormous: a sky dome near white at the horizon,
+  // wet sand, additive glow. Add exposure on top of that and the whole upper range is pushed
+  // into the same clipped white, so the difference between the hot core of the sunset and the
+  // orange band above it disappears — the very gradient that tells the eye what time it is.
+  // Held here, the brightest values stay inside the curve with room to separate, and the
+  // contrast that makes a sunset legible survives.
   renderer.toneMappingExposure = 1.38;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   window.addEventListener('resize', () => {

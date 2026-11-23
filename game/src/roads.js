@@ -39,10 +39,13 @@ export function buildRoadNetwork(rng) {
     const g = new THREE.PlaneGeometry(w, d, 1, 1);
     g.rotateX(-Math.PI / 2);
     g.translate(x0 + w / 2, ROAD_TOP, z0 + d / 2);
-    // World-space UVs so the asphalt texture keeps a constant scale: dividing by 18 makes
-    // one texture tile cover 18 m of road in both directions, whatever the strip's width or
-    // length. That is what stops a wide avenue stretching the aggregate and a narrow side
-    // street cramming it, so every road looks made of the same surface.
+    // UVs are laid out in world metres, then divided by the tile size. Because the divisor
+    // is a fixed 18, one pass of the asphalt texture always covers 18 m of road no matter how
+    // wide or long the strip is: a six-lane avenue and a two-lane side street both get the
+    // same size of aggregate and the same spacing of tar seams, so a lane marking painted
+    // across them is the same width in the world either way. Stretching the texture to fit
+    // the strip instead (the default UVs) would squeeze the grain on narrow roads and blow
+    // it up on wide ones, and the markings would appear to change scale as you drive around.
     const uv = g.getAttribute('uv');
     for (let i = 0; i < uv.count; i++) uv.setXY(i, (x0 + uv.getX(i) * w) / 18, (z0 + uv.getY(i) * d) / 18);
     asphaltParts.push(g);
@@ -139,8 +142,11 @@ export function buildRoadNetwork(rng) {
   }
 
   const roadTex = asphaltTexture(rng);
-  // Fully rough and non-metallic: asphalt is a matte dielectric, so it has no specular
-  // mirror of the sky to give itself away. All of its warmth comes from the sun and fog.
+  // Asphalt is a matte dielectric. Roughness close to 1 scatters the incoming light in every
+  // direction, so the surface shows almost no sharp reflection of the sky, and metalness 0
+  // keeps it from behaving like a conductor with a coloured specular. Whatever warmth it
+  // appears to have therefore comes from the light falling on it — the low sun and the fog —
+  // rather than from a sheen of its own, which is exactly how a real road behaves at dusk.
   const roadMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.94, metalness: 0.0, color: 0xffffff });
   const roads = new THREE.Mesh(mergeGeometries(asphaltParts), roadMat);
   roads.receiveShadow = true;

@@ -14,10 +14,14 @@ export class City {
     this.colliders = [];
     this.palms = [];
     this.scene = new THREE.Scene();
-    // The fog colour is what sells the time of day — it is the air of the whole scene, so it
-    // is matched to the sunset haze rather than pulled toward a neutral grey. The density is
-    // deliberately light: far enough out the towers soften but still read, and near-to-far
-    // still carries real depth.
+    // Exponential fog is doing the colour grading for distance, and because it covers every
+    // surface out to the horizon its tint is effectively the scene's clock. Warm it and the
+    // whole city is late afternoon; cool it and the same geometry turns overcast. It is set
+    // here to the same warm family as the sunset haze so receding streets dissolve into the
+    // sky instead of into a grey wall. Density is the other half of the choice: light enough
+    // that the far towers keep their edges and their silhouettes (a heavier value erases the
+    // skyline the wide shots depend on), heavy enough that the near blocks and the far ones
+    // sit at visibly different depths. It is what keeps distance readable rather than blank.
     this.scene.fog = new THREE.FogExp2(0xe8a878, 0.00092);
   }
 

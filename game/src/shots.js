@@ -68,6 +68,14 @@ export class ShotDirector {
   // ---------------------------------------------------------------- drive
   // Stolen car heading north up Ocean Drive at speed: sea and sun on the right,
   // traffic ahead, palms along the promenade, two stars on the HUD.
+  //
+  // FRAMING — low and close behind the car's rear quarter. The eye sits a few metres back
+  // down the car's axis and about a lane's width to one side, at bonnet height, so the coupe
+  // lands right of centre in the lower half of the frame as a solid mass while the avenue,
+  // the palms and the sunset open out beyond it. Holding the camera this near is the point:
+  // the car body carries the frame, and everything further down the street is read against
+  // the car's size. Pull back and the vehicle becomes one more object in the traffic; this
+  // close, it is the subject the street is arranged around.
   _stageDrive(rng) {
     const world = this.world;
     const p = world.player;
@@ -122,9 +130,9 @@ export class ShotDirector {
     const heading = new THREE.Vector3(Math.sin(car.yaw), 0, Math.cos(car.yaw));
     const right = new THREE.Vector3(heading.z, 0, -heading.x);
     const camPos = anchor.clone()
-      .addScaledVector(heading, 5.6)  // forward of the car, giving us its front quarter
-      .addScaledVector(right, 4.6)    // offset across the road
-      .setY(1.85);                    // near bonnet height
+      .addScaledVector(heading, 5.6)  // far enough forward to clear the nose and see the front wing
+      .addScaledVector(right, 4.6)    // one lane's worth across, so we look along the flank not the side
+      .setY(1.85);                    // bonnet height: low enough to put the horizon behind the roof
     const aimAt = anchor.clone().addScaledVector(heading, 0.4).setY(1.05);
     this.cameraPose = { eye: camPos, target: aimAt };
     this.cameraFn = () => {
@@ -141,8 +149,16 @@ export class ShotDirector {
   }
 
   // ---------------------------------------------------------------- chase
-  // Four stars, three cruisers on the player's tail, officers on the kerb firing. The
-  // camera sits ahead of the player looking back so the pursuit is visible.
+  // Four stars, three cruisers on the player's tail, officers on the kerb firing.
+  //
+  // FRAMING — the eye is carried a little way ahead of the player's car and just off to one
+  // side, at roof height, aimed back down the avenue. Looking back rather than forward is
+  // what keeps the pursuit in the picture: the framed car sits in the middle of the road with
+  // the cruisers strung out behind it, the officers on the kerb to the side, and the roadblock
+  // waiting further down. The sideways nudge keeps the car off dead centre so the composition
+  // reads as three-dimensional rather than as a rear-view mirror. Shift the eye level with the
+  // car or drop it behind and the cruisers slide out of frame; this is the distance that holds
+  // the car and its pursuers together.
   _stageChase(rng) {
     const world = this.world;
     const p = world.player;
@@ -204,7 +220,11 @@ export class ShotDirector {
       officer.joints.leftArm.rotation.x = -1.2;
       officer.joints.leftArm.rotation.z = 0.34;
     }
-    // camera: ahead of the player's car and low, looking back down the avenue at the pursuit
+    // camera: a little ahead of the player's car and above roof height, looking back down the
+    // avenue. The forward offset is what buys the pursuit room in frame — sit level with the
+    // car and the cruisers fall behind the lens; sit back and the car hides them. The aim
+    // point is a few metres behind the car, which tips the view so the road and the police
+    // fill the middle of the frame.
     this.cameraFn = () => {
       const v = world.player.inVehicle;
       const f = v.forward;
@@ -247,6 +267,13 @@ export class ShotDirector {
 
   // ---------------------------------------------------------------- mission
   // On foot, pistol drawn, mission marker ahead on the pavement, crowd around.
+  //
+  // FRAMING — over the shoulder. The rig is put on foot with a shoulder offset and a short
+  // boom, so the player sits low and to one side of frame with the pistol in the near third,
+  // and the camera looks past them down the pavement at the marker. Framing past the body
+  // rather than on it is what lets the target in the distance and the street around the
+  // player read at the same time: the viewer sees where they are going and the crowd they
+  // are moving through in one glance, instead of a close-up of a back or a floating marker.
   _stageMission(rng) {
     const world = this.world;
     const p = world.player;
@@ -279,10 +306,10 @@ export class ShotDirector {
 
     const rig = world.rig;
     rig.setMode('foot');
-    rig.yaw = 0.2;
-    rig.pitch = -0.02;
-    rig.shoulder = 0.75;
-    rig.distance = 0.68;
+    rig.yaw = 0.2;          // a few degrees off the player's facing, so the pavement opens up
+    rig.pitch = -0.02;      // near-level: the marker is far down the street, not at our feet
+    rig.shoulder = 0.75;    // push the player to the side of frame and open the centre on the target
+    rig.distance = 0.68;    // tight boom, close enough that the body stays in shot as the foreground
 
     settle(world, 40);
     world.hud.say(castMember('sal').name, castMember('sal').lines.arcWarn, 6);
@@ -293,6 +320,15 @@ export class ShotDirector {
   // ---------------------------------------------------------------- city
   // The wide one: from over the water, looking west-north-west along the beach at the
   // downtown skyline, with palms, Ocean Drive traffic and the warm sun behind the lens.
+  //
+  // FRAMING — lifted high and aimed down the sunset. The eye hangs well above the water and
+  // well back from the shoreline, and the aim runs nearly level across the beach toward the
+  // warm end of the dome, so the frame layers rather than flattens: tower tops cut into sky
+  // across the top, the beach and the coast road fill the middle band, the sea takes the
+  // bottom. That altitude is what lets all three read at once — from street level the towers
+  // hide the beach and the beach hides the water. Aiming along the sunset keeps the hot band
+  // inside the shot, so the coast reads as a place with a time of day rather than a skyline
+  // floating on nothing.
   _stageCity(rng) {
     const world = this.world;
     const p = world.player;
@@ -316,9 +352,12 @@ export class ShotDirector {
       if (i % 2 === 0) world.addPedestrianAt(CITY.landMaxX - 3 - (i % 3) * 4, -40 + i * 9);
     }
 
-    // Deliberately high and tilted down onto the sunset band, rather than placed at street
-    // level. From here one frame holds the towers, the beach and the water at once, which
-    // is what makes the city read as a place with a coastline instead of a flat skyline.
+    // The eye is lifted well clear of the street and set back over the water, and the target
+    // is placed low and far off down the beach, so the view looks down the coastline instead
+    // of across it. That downward aim is what stacks the three layers — towers against sky,
+    // beach and road in the middle band, sea along the bottom — into a single readable
+    // picture. From ground level those layers would occlude each other and the coast would
+    // be lost.
     this.cameraPose = {
       eye: new THREE.Vector3(300, 34, 268),
       target: new THREE.Vector3(-215, 46, 10),
