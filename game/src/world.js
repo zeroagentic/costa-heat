@@ -214,17 +214,17 @@ export class World {
     this.hud.setCash(this.cash);
     this.hud.setHealth(this.player.health, PLAYER.maxHealth);
     this.hud.setWanted(this.wanted.level);
-    const live = this.police.cruisers.filter((c) => !c.destroyed);
-    const foot = this.police.officers.filter((o) => o.alive).length;
-    const chasing = live.some((c) => c.vehicle.speed > 4);
+    const liveCruisers = this.police?.cruisers.filter((c) => !c.destroyed) ?? [];
+    const officersAlive = this.police?.officers.filter((o) => o.alive).length ?? 0;
+    const pursuitLive = liveCruisers.some((c) => c.vehicle.speed > 4);
     this.hud.setDispatch(
-      live.slice(0, 5).map((c, i) => ({
+      liveCruisers.slice(0, 5).map((c, i) => ({
         id: `UNIT ${UNIT_CALLSIGNS[i % UNIT_CALLSIGNS.length]}`,
-        role: chasing ? 'PURSUIT' : 'STAGING',
-        state: chasing ? 'hot' : 'idle',
+        role: pursuitLive ? 'PURSUIT' : 'STAGING',
+        state: pursuitLive ? 'hot' : 'idle',
       })),
-      foot,
-      chasing,
+      officersAlive,
+      pursuitLive,
     );
     this.hud.setWeapon(this.combat.weaponName, this.combat.ammo, this.combat.reserveAmmo, this.combat.reloading);
     this.hud.setHurt(this.player.hurtFlash > 0.15);

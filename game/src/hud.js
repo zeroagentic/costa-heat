@@ -58,6 +58,7 @@ export class Hud {
     this.lastAmmo = '';
     this.lastArea = '';
     this.objectiveSignature = '';
+    this.lastDispatch = '';
     this.hurt = 0;
   }
 
@@ -96,30 +97,34 @@ export class Hud {
     }
   }
 
-  // Live police radio. The unit list is what makes a pursuit read as an organised response
-  // rather than anonymous cars: a named callsign per cruiser, its role by wanted level, and
-  // the officers on foot tracked separately. Everything comes from world.police, so the panel
-  // is a read-out of units that actually exist in the scene at that moment.
+  /**
+   * The dispatch read-out: who is currently answering the call. `units` are
+   * [{id, role, state}] built from the live cruisers, `officers` is the count on foot and
+   * `onFoot` says whether they are actually on the ground rather than staged. Rebuilt only
+   * when the callsigns or the head-count change, so a steady pursuit costs no DOM work.
+   */
   setDispatch(units, officers, onFoot) {
     if (!this.dispatchUnits) return;
-    const sig = `${units.map((u) => u.id).join(',')}|${officers}|${onFoot}`;
+    const list = units ?? [];
+    const foot = Math.max(0, officers ?? 0);
+    const sig = `${list.map((u) => u.id).join(',')}|${foot}|${onFoot ? 1 : 0}`;
     if (sig === this.lastDispatch) return;
     this.lastDispatch = sig;
 
     this.dispatchUnits.textContent = '';
-    for (const u of units) {
+    for (const unit of list) {
       const row = document.createElement('div');
-      row.className = `dispatch-unit ${u.state}`;
+      row.className = `dispatch-unit ${unit.state}`;
       const id = document.createElement('span');
       id.className = 'unit-id';
-      id.textContent = u.id;
+      id.textContent = unit.id;
       const role = document.createElement('span');
       role.className = 'unit-role';
-      role.textContent = u.role;
+      role.textContent = unit.role;
       row.append(id, role);
       this.dispatchUnits.appendChild(row);
     }
-    if (officers > 0) {
+    if (foot > 0) {
       const row = document.createElement('div');
       row.className = 'dispatch-unit foot';
       const id = document.createElement('span');
@@ -127,11 +132,11 @@ export class Hud {
       id.textContent = 'FOOT';
       const role = document.createElement('span');
       role.className = 'unit-role';
-      role.textContent = onFoot ? `${officers} ON SCENE` : `${officers} DEPLOYED`;
+      role.textContent = onFoot ? `${foot} ON SCENE` : `${foot} DEPLOYED`;
       row.append(id, role);
       this.dispatchUnits.appendChild(row);
     }
-    this.dispatch?.classList.toggle('on', units.length > 0 || officers > 0);
+    this.dispatch?.classList.toggle('on', list.length > 0 || foot > 0);
   }
 
   setWeapon(name, ammo, reserve, reloading = false) {
