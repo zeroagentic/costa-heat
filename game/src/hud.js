@@ -35,6 +35,8 @@ export class Hud {
     this.areaEl = $('area-name');
     this.districtEl = $('district-name');
     this.wantedLabel = $('wanted-label');
+    this.dispatch = $('dispatch');
+    this.dispatchUnits = $('dispatch-units');
     this.garageEl = $('garage-count');
     this.subRow = this.garageEl?.closest('.row') ?? null;
 
@@ -92,6 +94,44 @@ export class Hud {
       this.wantedLabel.textContent = words[level] ?? '';
       this.wantedLabel.classList.toggle('on', level > 0);
     }
+  }
+
+  // Live police radio. The unit list is what makes a pursuit read as an organised response
+  // rather than anonymous cars: a named callsign per cruiser, its role by wanted level, and
+  // the officers on foot tracked separately. Everything comes from world.police, so the panel
+  // is a read-out of units that actually exist in the scene at that moment.
+  setDispatch(units, officers, onFoot) {
+    if (!this.dispatchUnits) return;
+    const sig = `${units.map((u) => u.id).join(',')}|${officers}|${onFoot}`;
+    if (sig === this.lastDispatch) return;
+    this.lastDispatch = sig;
+
+    this.dispatchUnits.textContent = '';
+    for (const u of units) {
+      const row = document.createElement('div');
+      row.className = `dispatch-unit ${u.state}`;
+      const id = document.createElement('span');
+      id.className = 'unit-id';
+      id.textContent = u.id;
+      const role = document.createElement('span');
+      role.className = 'unit-role';
+      role.textContent = u.role;
+      row.append(id, role);
+      this.dispatchUnits.appendChild(row);
+    }
+    if (officers > 0) {
+      const row = document.createElement('div');
+      row.className = 'dispatch-unit foot';
+      const id = document.createElement('span');
+      id.className = 'unit-id';
+      id.textContent = 'FOOT';
+      const role = document.createElement('span');
+      role.className = 'unit-role';
+      role.textContent = onFoot ? `${officers} ON SCENE` : `${officers} DEPLOYED`;
+      row.append(id, role);
+      this.dispatchUnits.appendChild(row);
+    }
+    this.dispatch?.classList.toggle('on', units.length > 0 || officers > 0);
   }
 
   setWeapon(name, ammo, reserve, reloading = false) {

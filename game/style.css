@@ -122,6 +122,55 @@ html, body {
   text-shadow: 0 1px 6px #000;
 }
 #wanted-label.on { opacity: 1; }
+
+/* Police radio panel. Reads like a dispatch screen rather than a score display: a staff
+   heading, then one line per live unit with its callsign and what it is doing. */
+#dispatch {
+  margin-top: 7px;
+  display: none;
+  border-right: 2px solid var(--pink);
+  padding-right: 9px;
+}
+#dispatch.on { display: block; }
+#dispatch-head {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  font-weight: 700;
+  color: var(--pink);
+  margin-bottom: 3px;
+}
+#dispatch-tag {
+  background: var(--pink);
+  color: #12060c;
+  padding: 1px 4px;
+  letter-spacing: 0.12em;
+}
+#dispatch-channel { color: rgba(255, 255, 255, 0.42); font-weight: 400; }
+#dispatch-units { display: flex; flex-direction: column; gap: 1px; align-items: flex-end; }
+.dispatch-unit {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  align-items: baseline;
+  font-size: 9px;
+  line-height: 13px;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 4px #000;
+}
+.unit-id { font-weight: 700; letter-spacing: 0.06em; }
+.unit-role {
+  font-size: 7px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.38);
+}
+.dispatch-unit.hot .unit-role { color: #ff8a3d; }
+.dispatch-unit.idle .unit-role { color: rgba(255, 255, 255, 0.3); }
+.dispatch-unit.foot .unit-id { color: #7ad0ff; }
+.dispatch-unit.foot .unit-role { color: rgba(122, 208, 255, 0.62); }
 #wanted .star {
   font-size: 25px;
   line-height: 30px;
