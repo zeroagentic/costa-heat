@@ -16,7 +16,6 @@ export class Hud {
     this.wantedEl = $('wanted');
     this.missionPanel = $('mission-panel');
     this.missionTitle = $('mission-title');
-    this.missionProgress = $('mission-progress');
     this.missionGiver = $('mission-giver');
     this.missionList = $('mission-objectives');
     this.weaponName = $('weapon-name');
@@ -35,10 +34,7 @@ export class Hud {
     this.areaEl = $('area-name');
     this.districtEl = $('district-name');
     this.wantedLabel = $('wanted-label');
-    this.dispatch = $('dispatch');
-    this.dispatchUnits = $('dispatch-units');
     this.garageEl = $('garage-count');
-    this.subRow = this.garageEl?.closest('.row') ?? null;
 
     this.stars = [];
     for (let i = 0; i < 5; i++) {
@@ -58,7 +54,6 @@ export class Hud {
     this.lastAmmo = '';
     this.lastArea = '';
     this.objectiveSignature = '';
-    this.lastDispatch = '';
     this.hurt = 0;
   }
 
@@ -97,48 +92,6 @@ export class Hud {
     }
   }
 
-  /**
-   * The dispatch read-out: who is currently answering the call. `units` are
-   * [{id, role, state}] built from the live cruisers, `officers` is the count on foot and
-   * `onFoot` says whether they are actually on the ground rather than staged. Rebuilt only
-   * when the callsigns or the head-count change, so a steady pursuit costs no DOM work.
-   */
-  setDispatch(units, officers, onFoot) {
-    if (!this.dispatchUnits) return;
-    const list = units ?? [];
-    const foot = Math.max(0, officers ?? 0);
-    const sig = `${list.map((u) => u.id).join(',')}|${foot}|${onFoot ? 1 : 0}`;
-    if (sig === this.lastDispatch) return;
-    this.lastDispatch = sig;
-
-    this.dispatchUnits.textContent = '';
-    for (const unit of list) {
-      const row = document.createElement('div');
-      row.className = `dispatch-unit ${unit.state}`;
-      const id = document.createElement('span');
-      id.className = 'unit-id';
-      id.textContent = unit.id;
-      const role = document.createElement('span');
-      role.className = 'unit-role';
-      role.textContent = unit.role;
-      row.append(id, role);
-      this.dispatchUnits.appendChild(row);
-    }
-    if (foot > 0) {
-      const row = document.createElement('div');
-      row.className = 'dispatch-unit foot';
-      const id = document.createElement('span');
-      id.className = 'unit-id';
-      id.textContent = 'FOOT';
-      const role = document.createElement('span');
-      role.className = 'unit-role';
-      role.textContent = onFoot ? `${foot} ON SCENE` : `${foot} DEPLOYED`;
-      row.append(id, role);
-      this.dispatchUnits.appendChild(row);
-    }
-    this.dispatch?.classList.toggle('on', list.length > 0 || foot > 0);
-  }
-
   setWeapon(name, ammo, reserve, reloading = false) {
     const sig = `${name}|${ammo}|${reserve}|${reloading}`;
     if (sig === this.lastAmmo) return;
@@ -155,15 +108,6 @@ export class Hud {
     }
     this.missionPanel.style.display = 'block';
     this.missionTitle.textContent = mission.title;
-    // The eyebrow states where this job sits in the campaign: the rubric wants the outline's
-    // structure legible in a single frame, and a run of jobs only reads as a campaign once the
-    // frame says which one the player is on. Both figures are zero-based/one-based in different
-    // ways, hence the +1 and the emptiness guard.
-    if (this.missionProgress) {
-      const position = Number.isFinite(mission.index) ? mission.index + 1 : null;
-      const outOf = Number.isFinite(mission.total) ? mission.total : null;
-      this.missionProgress.textContent = position && outOf ? `${position}/${outOf}` : '';
-    }
     if (this.missionGiver) {
       this.missionGiver.textContent = mission.giver ? `FOR ${mission.giver}` : '';
       this.missionGiver.style.color = mission.giverColour ?? '#ff3d8b';
@@ -256,42 +200,15 @@ export class Hud {
   setArea(x, z) {
     const name = AREA_NAMES[districtAt(x, z)] ?? AREA_NAMES.beach;
     if (name === this.lastArea) return;
-    const first = this.lastArea === '';
     this.lastArea = name;
     this.areaEl.textContent = name;
     this.districtEl.textContent = `${CITY_NAME} · ${name}`;
-    // the district line lives at 0.35 opacity so it stays out of the scene; crossing into a
-    // new district lifts it long enough to read, then it settles back
-    if (!first) this._flash(this.districtEl, 'flash', 2.5);
   }
 
   setGarage(count, capacity) {
     if (!this.garageEl) return;
-    const text = `GARAGE ${count}/${capacity}`;
-    // the row is hidden while nothing changes, so only a real change earns a flash; the
-    // first paint at boot is not news
-    const changed = this._lastGarage !== undefined && this._lastGarage !== text;
-    this._lastGarage = text;
-    this.garageEl.textContent = text;
+    this.garageEl.textContent = `GARAGE ${count}/${capacity}`;
     this.garageEl.classList.toggle('full', count >= capacity);
-    if (changed) this._flash(this.subRow, 'flash', 2.5);
-  }
-
-  /**
-   * Bring a low-opacity HUD element up for `seconds`, then let CSS ease it back down. Used
-   * by the district line and the garage/key-hint row, which have to stay in the DOM and keep
-   * updating but must not hold screen space in the standing HUD. Re-flashing restarts the
-   * clock instead of stacking timers.
-   */
-  _flash(el, cls, seconds) {
-    if (!el) return;
-    el.classList.add(cls);
-    this.flashTimers ??= new Map();
-    clearTimeout(this.flashTimers.get(el));
-    this.flashTimers.set(el, setTimeout(() => {
-      el.classList.remove(cls);
-      this.flashTimers.delete(el);
-    }, seconds * 1000));
   }
 
   setHurt(on) {

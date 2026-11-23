@@ -21,10 +21,6 @@ import { streamRng } from './random.js';
 import { CITY, GRID, PLAYER, ROAD, clamp, dist, damp } from './config.js';
 import { randomLanePoint, nearestEdge } from './roads.js';
 
-// Callsigns for the dispatch read-out. Fixed and ordered so the panel is stable frame to
-// frame; the index follows the cruiser's position in the live list.
-const UNIT_CALLSIGNS = ['1-ADAM', '2-BOY', '3-CHARLIE', '4-DAVID', '5-EDWARD'];
-
 export class World {
   constructor({ scene, camera, hud, audio, minimap, seed }) {
     this.scene = scene;
@@ -214,18 +210,6 @@ export class World {
     this.hud.setCash(this.cash);
     this.hud.setHealth(this.player.health, PLAYER.maxHealth);
     this.hud.setWanted(this.wanted.level);
-    const liveCruisers = this.police?.cruisers.filter((c) => !c.destroyed) ?? [];
-    const officersAlive = this.police?.officers.filter((o) => o.alive).length ?? 0;
-    const pursuitLive = liveCruisers.some((c) => c.vehicle.speed > 4);
-    this.hud.setDispatch(
-      liveCruisers.slice(0, 5).map((c, i) => ({
-        id: `UNIT ${UNIT_CALLSIGNS[i % UNIT_CALLSIGNS.length]}`,
-        role: pursuitLive ? 'PURSUIT' : 'STAGING',
-        state: pursuitLive ? 'hot' : 'idle',
-      })),
-      officersAlive,
-      pursuitLive,
-    );
     this.hud.setWeapon(this.combat.weaponName, this.combat.ammo, this.combat.reserveAmmo, this.combat.reloading);
     this.hud.setHurt(this.player.hurtFlash > 0.15);
     const inCar = Boolean(this.player.inVehicle);

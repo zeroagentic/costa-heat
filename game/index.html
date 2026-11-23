@@ -19,10 +19,7 @@
 
   <div id="hud" class="hidden" aria-hidden="true">
     <div id="mission-panel">
-      <!-- Position in the campaign, filled in from the active mission at runtime. The rubric
-           wants the outline's structure legible in a single frame, and a run of jobs only reads
-           as a campaign once the frame says which one the player is on. -->
-      <div class="eyebrow">MISSION <span id="mission-progress">1/5</span></div>
+      <div class="eyebrow">MISSION</div>
       <h3 id="mission-title">—</h3>
       <div id="mission-giver">—</div>
       <ul id="mission-objectives"></ul>
@@ -32,17 +29,10 @@
       <div id="wanted" aria-label="wanted level"></div>
       <div id="wanted-label"></div>
       <div id="cash">$0</div>
-      <div id="dispatch" aria-label="police dispatch">
-        <div id="dispatch-head">
-          <span id="dispatch-tag">VMPD</span>
-          <span id="dispatch-channel">CH 4 · DISPATCH</span>
-        </div>
-        <div id="dispatch-units"></div>
-      </div>
     </div>
 
     <div id="minimap-wrap">
-      <canvas id="minimap" width="320" height="320"></canvas>
+      <canvas id="minimap" width="360" height="360"></canvas>
       <div id="compass-n">N</div>
       <div id="area-name">PLAYA DORADA</div>
     </div>

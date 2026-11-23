@@ -543,11 +543,6 @@ export class Missions {
       giverId: def.giver,
       objectives: def.objectives.map((o) => ({ ...o, state: 'pending' })),
       failReason: null,
-      // This job's slot in the campaign ordering. The rubric wants the outline's structure
-      // legible in a single frame, and a run of jobs only reads as a campaign once the frame
-      // says which one the player is on — so the eyebrow prints "n/5".
-      index: MISSIONS.indexOf(def),
-      total: MISSIONS.length,
     };
     this.active.objectives[0].state = 'active';
     const ctx = this._ctx(world);
@@ -733,10 +728,6 @@ export class Missions {
       giverId: def.giver,
       objectives: def.objectives.map((o, i) => ({ ...o, state: i === 0 ? 'active' : 'pending' })),
       failReason: null,
-      // The same campaign position the live start path records, so a staged screenshot shows
-      // the same "which one of the five" reading as one the player actually played.
-      index: this.index,
-      total: this.defs.length,
     };
     const ctx = this._ctx(world);
     def.setup(ctx);
